@@ -27,19 +27,19 @@ export default function ManagerLayout({
   // Check for existing session on component mount and listen for changes
   useEffect(() => {
     const checkAuth = () => {
-      const savedUser = localStorage.getItem('managerUser')
+      const savedUser = localStorage.getItem('user')
       if (savedUser) {
         try {
           const user = JSON.parse(savedUser)
           if (user.role === 'ADMIN') {
             setCurrentUser(user)
           } else {
-            localStorage.removeItem('managerUser')
+            localStorage.removeItem('user')
             setCurrentUser(null)
           }
         } catch (error) {
-          console.error('Error parsing saved manager user:', error)
-          localStorage.removeItem('managerUser')
+          console.error('Error parsing saved user:', error)
+          localStorage.removeItem('user')
           setCurrentUser(null)
         }
       } else {
@@ -53,7 +53,7 @@ export default function ManagerLayout({
 
     // Listen for storage changes (when user logs in/out)
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'managerUser') {
+      if (e.key === 'user') {
         checkAuth()
       }
     }
@@ -74,7 +74,7 @@ export default function ManagerLayout({
 
   const handleLogout = () => {
     setCurrentUser(null)
-    localStorage.removeItem('managerUser')
+    localStorage.removeItem('user')
     // Dispatch custom event to notify other components
     window.dispatchEvent(new CustomEvent('managerAuthChange'))
     window.location.href = '/manager'

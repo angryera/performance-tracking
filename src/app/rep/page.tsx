@@ -50,17 +50,16 @@ export default function RepPortal() {
 
   // Check for existing session on component mount
   useEffect(() => {
-    const savedUser = localStorage.getItem('currentUser')
+    const savedUser = localStorage.getItem('user')
     if (savedUser) {
       try {
         const user = JSON.parse(savedUser)
         setCurrentUser(user)
         setIsLoggedIn(true)
-        // Fetch user usage data
         fetchUserUsage(user.id)
       } catch (error) {
         console.error('Error parsing saved user:', error)
-        localStorage.removeItem('currentUser')
+        localStorage.removeItem('user')
       }
     }
   }, [])
@@ -87,7 +86,9 @@ export default function RepPortal() {
     setCurrentUser(null)
     setIsLoggedIn(false)
     setUserUsage(null)
-    localStorage.removeItem('currentUser')
+    localStorage.removeItem('user')
+    // Dispatch custom event to notify manager layout about auth change
+    window.dispatchEvent(new CustomEvent('managerAuthChange'))
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -110,7 +111,9 @@ export default function RepPortal() {
         setCurrentUser(data.user)
         setIsLoggedIn(true)
         // Save user to localStorage for session persistence
-        localStorage.setItem('currentUser', JSON.stringify(data.user))
+        localStorage.setItem('user', JSON.stringify(data.user))
+        // Dispatch custom event to notify manager layout about auth change
+        window.dispatchEvent(new CustomEvent('managerAuthChange'))
         // Fetch user usage data
         fetchUserUsage(data.user.id)
       } else {

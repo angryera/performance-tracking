@@ -72,27 +72,24 @@ export default function ManagerDashboard() {
 
   // Check for existing session on component mount
   useEffect(() => {
-    const savedUser = localStorage.getItem('managerUser')
+    const savedUser = localStorage.getItem('user')
     if (savedUser) {
       try {
         const user = JSON.parse(savedUser)
-        // Only allow ADMIN users to access manager portal
         if (user.role === 'ADMIN') {
           setCurrentUser(user)
           setIsLoggedIn(true)
           fetchStats()
           fetchRecentActivities()
         } else {
-          localStorage.removeItem('managerUser')
+          localStorage.removeItem('user')
         }
       } catch (error) {
-        console.error('Error parsing saved manager user:', error)
-        localStorage.removeItem('managerUser')
+        console.error('Error parsing saved user:', error)
+        localStorage.removeItem('user')
       }
-    } else {
-      // Check if admin users exist
-      checkAdminUsers()
     }
+    checkAdminUsers()
   }, [])
 
   const checkAdminUsers = async () => {
@@ -139,7 +136,7 @@ export default function ManagerDashboard() {
         if (loginResponse.ok && loginData.user.role === 'ADMIN') {
           setCurrentUser(loginData.user)
           setIsLoggedIn(true)
-          localStorage.setItem('managerUser', JSON.stringify(loginData.user))
+          localStorage.setItem('user', JSON.stringify(loginData.user))
           // Dispatch custom event to notify layout about auth change
           window.dispatchEvent(new CustomEvent('managerAuthChange'))
         }
@@ -180,7 +177,9 @@ export default function ManagerDashboard() {
   const handleLogout = () => {
     setCurrentUser(null)
     setIsLoggedIn(false)
-    localStorage.removeItem('managerUser')
+    localStorage.removeItem('user')
+    // Dispatch custom event to notify layout about auth change
+    window.dispatchEvent(new CustomEvent('managerAuthChange'))
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -203,7 +202,7 @@ export default function ManagerDashboard() {
         if (data.user.role === 'ADMIN') {
           setCurrentUser(data.user)
           setIsLoggedIn(true)
-          localStorage.setItem('managerUser', JSON.stringify(data.user))
+          localStorage.setItem('user', JSON.stringify(data.user))
           // Dispatch custom event to notify layout about auth change
           window.dispatchEvent(new CustomEvent('managerAuthChange'))
         } else {

@@ -60,21 +60,20 @@ export default function ConversationsPage() {
 
   // Check for existing session on component mount
   useEffect(() => {
-    const savedUser = localStorage.getItem('managerUser')
+    const savedUser = localStorage.getItem('user')
     if (savedUser) {
       try {
         const user = JSON.parse(savedUser)
-        // Only allow ADMIN users to access manager portal
         if (user.role === 'ADMIN') {
           setCurrentUser(user)
           setIsLoggedIn(true)
           fetchConversations()
         } else {
-          localStorage.removeItem('managerUser')
+          localStorage.removeItem('user')
         }
       } catch (error) {
-        console.error('Error parsing saved manager user:', error)
-        localStorage.removeItem('managerUser')
+        console.error('Error parsing saved user:', error)
+        localStorage.removeItem('user')
       }
     }
   }, [])
@@ -82,7 +81,9 @@ export default function ConversationsPage() {
   const handleLogout = () => {
     setCurrentUser(null)
     setIsLoggedIn(false)
-    localStorage.removeItem('managerUser')
+    localStorage.removeItem('user')
+    // Dispatch custom event to notify layout about auth change
+    window.dispatchEvent(new CustomEvent('managerAuthChange'))
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -105,7 +106,7 @@ export default function ConversationsPage() {
         if (data.user.role === 'ADMIN') {
           setCurrentUser(data.user)
           setIsLoggedIn(true)
-          localStorage.setItem('managerUser', JSON.stringify(data.user))
+          localStorage.setItem('user', JSON.stringify(data.user))
           // Dispatch custom event to notify layout about auth change
           window.dispatchEvent(new CustomEvent('managerAuthChange'))
           fetchConversations()
