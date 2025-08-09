@@ -220,11 +220,16 @@ export default function RepPortal() {
               </div>
               <div className="flex flex-col min-w-0">
                 <span className={`${quicksand.className} font-bold text-white text-lg sm:text-xl lg:text-2xl tracking-tight truncate`}>
-                  Sales Rep Dashboard
+                  LevelRep
                 </span>
                 {currentUser && (
                   <span className={`${poppins.className} font-medium text-slate-300 text-xs sm:text-sm truncate`}>
                     Welcome, {currentUser.firstName} {currentUser.lastName}
+                    {currentUser.role === 'ADMIN' && (
+                      <span className="bg-blue-500 ml-2 px-2 py-0.5 rounded-full text-white text-xs">
+                        Admin
+                      </span>
+                    )}
                   </span>
                 )}
               </div>
@@ -235,6 +240,17 @@ export default function RepPortal() {
                   <div className="bg-green-500 rounded-full w-2 h-2 animate-pulse"></div>
                   <span>Online</span>
                 </div>
+              )}
+              {currentUser?.role === 'ADMIN' && (
+                <a
+                  href="/manager"
+                  className={`${poppins.className} bg-blue-600 hover:bg-blue-700 hover:shadow-md px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-semibold text-white transition-colors duration-200 text-xs sm:text-sm flex items-center`}
+                >
+                  <svg className="mr-1.5 w-3 sm:w-4 h-3 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  Manager Portal
+                </a>
               )}
               <button
                 onClick={handleLogout}

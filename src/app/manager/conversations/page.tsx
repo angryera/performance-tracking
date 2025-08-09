@@ -1,7 +1,29 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Eye, Search, Filter, Loader2 } from 'lucide-react'
+import { Eye, Search, Filter, Loader2, BarChart3, User, Lock, LogIn, AlertCircle } from 'lucide-react'
+import { Inter, Poppins, Quicksand } from 'next/font/google'
+
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+const poppins = Poppins({
+  weight: ['300', '400', '500', '600', '700'],
+  subsets: ['latin'],
+  variable: '--font-poppins'
+})
+const quicksand = Quicksand({
+  weight: ['300', '400', '500', '600', '700'],
+  subsets: ['latin'],
+  variable: '--font-quicksand'
+})
+
+interface User {
+  id: string
+  email: string
+  firstName: string
+  lastName: string
+  role: string
+  minutes: number
+}
 
 interface Conversation {
   id: string
@@ -19,39 +41,107 @@ interface Conversation {
 }
 
 export default function ConversationsPage() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [loginData, setLoginData] = useState({
+    email: '',
+    password: ''
+  })
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string>('')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedGrade, setSelectedGrade] = useState('all')
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
   const [conversations, setConversations] = useState<Conversation[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [isLoadingConversations, setIsLoadingConversations] = useState(true)
+  const [conversationsError, setConversationsError] = useState<string | null>(null)
   const [transcriptSearch, setTranscriptSearch] = useState('')
   const [highlightedLine, setHighlightedLine] = useState<number | null>(null)
 
-  // Fetch conversations from database
+  // Check for existing session on component mount
   useEffect(() => {
-    const fetchConversations = async () => {
+    const savedUser = localStorage.getItem('managerUser')
+    if (savedUser) {
       try {
-        setIsLoading(true)
-        setError(null)
-        
-        const response = await fetch('/api/conversations')
-        if (!response.ok) {
-          throw new Error('Failed to fetch conversations')
+        const user = JSON.parse(savedUser)
+        // Only allow ADMIN users to access manager portal
+        if (user.role === 'ADMIN') {
+          setCurrentUser(user)
+          setIsLoggedIn(true)
+          fetchConversations()
+        } else {
+          localStorage.removeItem('managerUser')
         }
-        
-        const data = await response.json()
-        setConversations(data)
-      } catch (err) {
-        console.error('Error fetching conversations:', err)
-        setError('Failed to load conversations. Please try again.')
-      } finally {
-        setIsLoading(false)
+      } catch (error) {
+        console.error('Error parsing saved manager user:', error)
+        localStorage.removeItem('managerUser')
       }
     }
-
-    fetchConversations()
   }, [])
+
+  const handleLogout = () => {
+    setCurrentUser(null)
+    setIsLoggedIn(false)
+    localStorage.removeItem('managerUser')
+  }
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError('')
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(loginData),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        if (data.user.role === 'ADMIN') {
+          setCurrentUser(data.user)
+          setIsLoggedIn(true)
+          localStorage.setItem('managerUser', JSON.stringify(data.user))
+          // Dispatch custom event to notify layout about auth change
+          window.dispatchEvent(new CustomEvent('managerAuthChange'))
+          fetchConversations()
+        } else {
+          setError('Access denied. Admin role required.')
+        }
+      } else {
+        setError(data.error || 'Login failed')
+      }
+    } catch (error) {
+      setError('Network error. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Fetch conversations from database
+  const fetchConversations = async () => {
+    try {
+      setIsLoadingConversations(true)
+      setConversationsError(null)
+      
+      const response = await fetch('/api/conversations')
+      if (!response.ok) {
+        throw new Error('Failed to fetch conversations')
+      }
+      
+      const data = await response.json()
+      setConversations(data)
+    } catch (err) {
+      console.error('Error fetching conversations:', err)
+      setConversationsError('Failed to load conversations. Please try again.')
+    } finally {
+      setIsLoadingConversations(false)
+    }
+  }
 
   const filteredConversations = conversations.filter(conv => {
     const matchesSearch = conv.user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -82,6 +172,91 @@ export default function ConversationsPage() {
     if (!searchTerm) return text
     const regex = new RegExp(`(${searchTerm})`, 'gi')
     return text.replace(regex, '<mark class="bg-yellow-200 px-1 rounded">$1</mark>')
+  }
+
+  if (!isLoggedIn) {
+    return (
+      <div className={`${poppins.variable} ${quicksand.variable} flex justify-center items-center bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen px-4 sm:px-6`} suppressHydrationWarning>
+        <div className="space-y-6 sm:space-y-8 w-full max-w-md">
+          <div className="text-center">
+            <div className="flex justify-center items-center bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg mx-auto rounded-full w-14 sm:w-16 h-14 sm:h-16">
+              <BarChart3 className="w-6 sm:w-8 h-6 sm:h-8 text-white" />
+            </div>
+            <h2 className={`${quicksand.className} mt-4 sm:mt-6 font-bold text-gray-900 text-2xl sm:text-3xl lg:text-4xl tracking-tight`}>
+              Manager Portal
+            </h2>
+            <p className={`${poppins.className} mt-2 sm:mt-3 text-gray-600 text-sm sm:text-base font-light px-4`}>
+              Sign in to access the conversations
+            </p>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50 p-3 border border-red-200 rounded-lg">
+              <div className="flex items-center">
+                <AlertCircle className="flex-shrink-0 mr-2 w-4 h-4 text-red-600" />
+                <span className="text-red-800 text-sm">{error}</span>
+              </div>
+            </div>
+          )}
+
+          <form className="space-y-4 sm:space-y-6 mt-6 sm:mt-8" onSubmit={handleLogin}>
+            <div className="space-y-4 sm:space-y-6">
+              <div>
+                <label htmlFor="email" className={`${poppins.className} block font-medium text-gray-700 text-sm mb-2`}>
+                  Email Address
+                </label>
+                <div className="relative">
+                  <User className="top-1/2 left-3 sm:left-4 absolute w-4 sm:w-5 h-4 sm:h-5 text-gray-400 -translate-y-1/2 transform" />
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    required
+                    disabled={isLoading}
+                    value={loginData.email}
+                    onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                    className={`${poppins.className} block relative disabled:opacity-50 py-2.5 sm:py-3 pr-4 pl-10 sm:pl-12 border border-gray-300 focus:border-blue-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-gray-900 appearance-none placeholder-gray-500 font-medium text-sm sm:text-base`}
+                    placeholder="Enter your email"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="password" className={`${poppins.className} block font-medium text-gray-700 text-sm mb-2`}>
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="top-1/2 left-3 sm:left-4 absolute w-4 sm:w-5 h-4 sm:h-5 text-gray-400 -translate-y-1/2 transform" />
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    required
+                    disabled={isLoading}
+                    value={loginData.password}
+                    onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                    className={`${poppins.className} block relative disabled:opacity-50 py-2.5 sm:py-3 pr-4 pl-10 sm:pl-12 border border-gray-300 focus:border-blue-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-gray-900 appearance-none placeholder-gray-500 font-medium text-sm sm:text-base`}
+                    placeholder="Enter your password"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 sm:space-y-6">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className={`${poppins.className} w-full disabled:opacity-50 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl transition-all duration-200 text-sm sm:text-base flex justify-center items-center`}
+              >
+                <LogIn className="mr-2 sm:mr-3 w-4 sm:w-5 h-4 sm:h-5" />
+                {isLoading ? 'Signing In...' : 'Sign In'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -128,17 +303,17 @@ export default function ConversationsPage() {
       </div>
 
       {/* Loading State */}
-      {isLoading && (
-        <div className="bg-white shadow p-6 sm:p-8 rounded-lg">
-          <div className="flex justify-center items-center">
-            <Loader2 className="mr-3 w-6 sm:w-8 h-6 sm:h-8 text-blue-600 animate-spin" />
+      {isLoadingConversations && (
+        <div className="flex justify-center items-center py-8 sm:py-12">
+          <div className="flex items-center space-x-2">
+            <Loader2 className="w-5 sm:w-6 h-5 sm:h-6 text-blue-600 animate-spin" />
             <span className="text-gray-600 text-sm sm:text-base">Loading conversations...</span>
           </div>
         </div>
       )}
 
       {/* Error State */}
-      {error && (
+      {conversationsError && (
         <div className="bg-red-50 p-3 sm:p-4 border border-red-200 rounded-lg">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -147,14 +322,14 @@ export default function ConversationsPage() {
               </div>
             </div>
             <div className="ml-3">
-              <p className="text-red-800 text-sm sm:text-base">{error}</p>
+              <p className="text-red-800 text-sm sm:text-base">{conversationsError}</p>
             </div>
           </div>
         </div>
       )}
 
       {/* Conversations Table */}
-      {!isLoading && !error && (
+      {!isLoadingConversations && !conversationsError && (
         <>
           {conversations.length === 0 ? (
             <div className="bg-white shadow p-6 sm:p-8 rounded-lg">

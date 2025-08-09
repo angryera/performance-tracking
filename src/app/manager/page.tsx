@@ -1,7 +1,29 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, Phone, TrendingUp, Download, AlertCircle } from 'lucide-react'
+import { Users, Phone, TrendingUp, Download, AlertCircle, BarChart3, User, Lock, LogIn } from 'lucide-react'
+import { Inter, Poppins, Quicksand } from 'next/font/google'
+
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+const poppins = Poppins({
+  weight: ['300', '400', '500', '600', '700'],
+  subsets: ['latin'],
+  variable: '--font-poppins'
+})
+const quicksand = Quicksand({
+  weight: ['300', '400', '500', '600', '700'],
+  subsets: ['latin'],
+  variable: '--font-quicksand'
+})
+
+interface User {
+  id: string
+  email: string
+  firstName: string
+  lastName: string
+  role: string
+  minutes: number
+}
 
 interface DashboardStats {
   totalReps: number
@@ -26,8 +48,19 @@ interface RecentActivity {
 }
 
 export default function ManagerDashboard() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [loginData, setLoginData] = useState({
+    email: '',
+    password: ''
+  })
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string>('')
   const [isImporting, setIsImporting] = useState(false)
   const [importStatus, setImportStatus] = useState<string>('')
+  const [hasAdmin, setHasAdmin] = useState<boolean | null>(null)
+  const [isSettingUp, setIsSettingUp] = useState(false)
+  const [setupCredentials, setSetupCredentials] = useState<{email: string, password: string} | null>(null)
   const [stats, setStats] = useState<DashboardStats>({
     totalReps: 0,
     totalCalls: 0,
@@ -36,6 +69,89 @@ export default function ManagerDashboard() {
     grantedMinutes: 0
   })
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([])
+
+  // Check for existing session on component mount
+  useEffect(() => {
+    const savedUser = localStorage.getItem('managerUser')
+    if (savedUser) {
+      try {
+        const user = JSON.parse(savedUser)
+        // Only allow ADMIN users to access manager portal
+        if (user.role === 'ADMIN') {
+          setCurrentUser(user)
+          setIsLoggedIn(true)
+          fetchStats()
+          fetchRecentActivities()
+        } else {
+          localStorage.removeItem('managerUser')
+        }
+      } catch (error) {
+        console.error('Error parsing saved manager user:', error)
+        localStorage.removeItem('managerUser')
+      }
+    } else {
+      // Check if admin users exist
+      checkAdminUsers()
+    }
+  }, [])
+
+  const checkAdminUsers = async () => {
+    try {
+      const response = await fetch('/api/auth/setup-admin')
+      if (response.ok) {
+        const data = await response.json()
+        setHasAdmin(data.hasAdmin)
+      }
+    } catch (error) {
+      console.error('Error checking admin users:', error)
+    }
+  }
+
+  const setupDefaultAdmin = async () => {
+    setIsSettingUp(true)
+    setError('')
+
+    try {
+      const response = await fetch('/api/auth/setup-admin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setSetupCredentials(data.credentials)
+        setHasAdmin(true)
+        
+        // Auto-login with the created credentials
+        const loginResponse = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data.credentials),
+        })
+
+        const loginData = await loginResponse.json()
+
+        if (loginResponse.ok && loginData.user.role === 'ADMIN') {
+          setCurrentUser(loginData.user)
+          setIsLoggedIn(true)
+          localStorage.setItem('managerUser', JSON.stringify(loginData.user))
+          // Dispatch custom event to notify layout about auth change
+          window.dispatchEvent(new CustomEvent('managerAuthChange'))
+        }
+      } else {
+        setError(data.error || 'Failed to create admin user')
+      }
+    } catch (error) {
+      setError('Network error. Please try again.')
+    } finally {
+      setIsSettingUp(false)
+    }
+  }
 
   const fetchStats = async () => {
     try {
@@ -61,11 +177,166 @@ export default function ManagerDashboard() {
     }
   }
 
-  useEffect(() => {
-    fetchStats()
-    fetchRecentActivities()
-  }, [])
+  const handleLogout = () => {
+    setCurrentUser(null)
+    setIsLoggedIn(false)
+    localStorage.removeItem('managerUser')
+  }
 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError('')
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(loginData),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        if (data.user.role === 'ADMIN') {
+          setCurrentUser(data.user)
+          setIsLoggedIn(true)
+          localStorage.setItem('managerUser', JSON.stringify(data.user))
+          // Dispatch custom event to notify layout about auth change
+          window.dispatchEvent(new CustomEvent('managerAuthChange'))
+        } else {
+          setError('Access denied. Admin role required.')
+        }
+      } else {
+        setError(data.error || 'Login failed')
+      }
+    } catch (error) {
+      setError('Network error. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  if (!isLoggedIn) {
+    return (
+      <div className={`${poppins.variable} ${quicksand.variable} flex justify-center items-center bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen px-4 sm:px-6`} suppressHydrationWarning>
+        <div className="space-y-6 sm:space-y-8 w-full max-w-md">
+          <div className="text-center">
+            <div className="flex justify-center items-center bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg mx-auto rounded-full w-14 sm:w-16 h-14 sm:h-16">
+              <BarChart3 className="w-6 sm:w-8 h-6 sm:h-8 text-white" />
+            </div>
+            <h2 className={`${quicksand.className} mt-4 sm:mt-6 font-bold text-gray-900 text-2xl sm:text-3xl lg:text-4xl tracking-tight`}>
+              Manager Portal
+            </h2>
+            <p className={`${poppins.className} mt-2 sm:mt-3 text-gray-600 text-sm sm:text-base font-light px-4`}>
+              {hasAdmin === false ? 'Set up your first admin user' : 'Sign in to access the manager dashboard'}
+            </p>
+          </div>
+
+          {/* Setup Success Message */}
+          {setupCredentials && (
+            <div className="bg-green-50 p-4 border border-green-200 rounded-lg">
+              <div className="text-center">
+                <h3 className="mb-2 font-semibold text-green-800 text-sm">Admin User Created Successfully!</h3>
+                <p className="mb-3 text-green-700 text-xs">Use these credentials to log in:</p>
+                <div className="bg-white p-3 border border-green-200 rounded text-left">
+                  <p className="text-green-800 text-xs"><strong>Email:</strong> {setupCredentials.email}</p>
+                  <p className="text-green-800 text-xs"><strong>Password:</strong> {setupCredentials.password}</p>
+                </div>
+                <p className="mt-2 text-green-600 text-xs">Please change these credentials after your first login.</p>
+              </div>
+            </div>
+          )}
+
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50 p-3 border border-red-200 rounded-lg">
+              <div className="flex items-center">
+                <AlertCircle className="flex-shrink-0 mr-2 w-4 h-4 text-red-600" />
+                <span className="text-red-800 text-sm">{error}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Setup Admin Button */}
+          {hasAdmin === false && !setupCredentials && (
+            <div className="text-center">
+              <button
+                onClick={setupDefaultAdmin}
+                disabled={isSettingUp}
+                className={`${poppins.className} w-full disabled:opacity-50 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl transition-all duration-200 text-sm sm:text-base flex justify-center items-center`}
+              >
+                {isSettingUp ? 'Setting up...' : 'Create Default Admin User'}
+              </button>
+              <p className="mt-2 text-gray-500 text-xs">This will create a default admin user with credentials you can use to log in.</p>
+            </div>
+          )}
+
+          {/* Login Form */}
+          {hasAdmin !== false && (
+            <form className="space-y-4 sm:space-y-6 mt-6 sm:mt-8" onSubmit={handleLogin}>
+              <div className="space-y-4 sm:space-y-6">
+                <div>
+                  <label htmlFor="email" className={`${poppins.className} block font-medium text-gray-700 text-sm mb-2`}>
+                    Email Address
+                  </label>
+                  <div className="relative">
+                    <User className="top-1/2 left-3 sm:left-4 absolute w-4 sm:w-5 h-4 sm:h-5 text-gray-400 -translate-y-1/2 transform" />
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      required
+                      disabled={isLoading}
+                      value={loginData.email}
+                      onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                      className={`${poppins.className} block relative disabled:opacity-50 py-2.5 sm:py-3 pr-4 pl-10 sm:pl-12 border border-gray-300 focus:border-blue-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-gray-900 appearance-none placeholder-gray-500 font-medium text-sm sm:text-base`}
+                      placeholder="Enter your email"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="password" className={`${poppins.className} block font-medium text-gray-700 text-sm mb-2`}>
+                    Password
+                  </label>
+                  <div className="relative">
+                    <Lock className="top-1/2 left-3 sm:left-4 absolute w-4 sm:w-5 h-4 sm:h-5 text-gray-400 -translate-y-1/2 transform" />
+                    <input
+                      id="password"
+                      name="password"
+                      type="password"
+                      required
+                      disabled={isLoading}
+                      value={loginData.password}
+                      onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                      className={`${poppins.className} block relative disabled:opacity-50 py-2.5 sm:py-3 pr-4 pl-10 sm:pl-12 border border-gray-300 focus:border-blue-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-gray-900 appearance-none placeholder-gray-500 font-medium text-sm sm:text-base`}
+                      placeholder="Enter your password"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 sm:space-y-6">
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className={`${poppins.className} w-full disabled:opacity-50 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl transition-all duration-200 text-sm sm:text-base flex justify-center items-center`}
+                >
+                  <LogIn className="mr-2 sm:mr-3 w-4 sm:w-5 h-4 sm:h-5" />
+                  {isLoading ? 'Signing In...' : 'Sign In'}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // Rest of the dashboard content remains the same
   const formatTimeAgo = (timestamp: string) => {
     const now = new Date()
     const time = new Date(timestamp)
@@ -98,14 +369,14 @@ export default function ManagerDashboard() {
       
       if (response.ok) {
         setImportStatus('Data imported successfully!')
-        // Refresh stats and activities after successful import
+        // Refresh stats after import
         fetchStats()
         fetchRecentActivities()
       } else {
-        setImportStatus('Failed to import data. Please check your configuration.')
+        setImportStatus('Failed to import data. Please try again.')
       }
     } catch (error) {
-      setImportStatus('Error importing data. Please try again.')
+      setImportStatus('Network error. Please try again.')
     } finally {
       setIsImporting(false)
     }
@@ -116,32 +387,35 @@ export default function ManagerDashboard() {
       {/* Header */}
       <div className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="font-bold text-gray-900 text-2xl sm:text-3xl">Dashboard Overview</h1>
-          <p className="mt-1 text-gray-600 text-sm sm:text-base">Monitor your sales team's performance</p>
+          <h1 className="font-bold text-gray-900 text-2xl sm:text-3xl">Manager Dashboard</h1>
+          <p className="mt-1 text-gray-600 text-sm sm:text-base">Welcome back, {currentUser?.firstName} {currentUser?.lastName}</p>
         </div>
-        <button
-          onClick={handleImportData}
-          disabled={isImporting}
-          className="inline-flex justify-center items-center bg-blue-600 hover:bg-blue-700 disabled:opacity-50 px-3 sm:px-4 py-2 rounded-lg w-full sm:w-auto font-medium text-white text-sm sm:text-base disabled:cursor-not-allowed"
-        >
-          <Download className="mr-2 w-4 h-4" />
-          {isImporting ? 'Importing...' : 'Import from Google Sheets'}
-        </button>
       </div>
 
-      {/* Import Status */}
-      {importStatus && (
-        <div className={`p-3 sm:p-4 rounded-lg ${
-          importStatus.includes('successfully') 
-            ? 'bg-green-50 text-green-800 border border-green-200' 
-            : 'bg-red-50 text-red-800 border border-red-200'
-        }`}>
-          <div className="flex items-center">
-            <AlertCircle className="flex-shrink-0 mr-2 w-4 h-4" />
-            <span className="text-sm sm:text-base">{importStatus}</span>
+      {/* Import Section */}
+      <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
+        <div className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-4">
+          <div>
+            <h3 className="font-semibold text-gray-900 text-base sm:text-lg">Import Data</h3>
+            <p className="mt-1 text-gray-600 text-sm">Import sales representatives from Google Sheets</p>
           </div>
+          <button
+            onClick={handleImportData}
+            disabled={isImporting}
+            className="flex items-center bg-blue-600 hover:bg-blue-700 disabled:opacity-50 px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium text-white text-sm transition-colors"
+          >
+            <Download className="mr-2 w-4 h-4" />
+            {isImporting ? 'Importing...' : 'Import Data'}
+          </button>
         </div>
-      )}
+        {importStatus && (
+          <div className="mt-3 sm:mt-4 p-3 border rounded-lg text-sm">
+            <span className={importStatus.includes('successfully') ? 'text-green-600' : 'text-red-600'}>
+              {importStatus}
+            </span>
+          </div>
+        )}
+      </div>
 
       {/* Stats Cards */}
       <div className="gap-4 sm:gap-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
@@ -247,20 +521,26 @@ export default function ManagerDashboard() {
                     <span className="block truncate">{activity.message}</span>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {activity.grade && (
-                        <span className="bg-gray-100 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs">
+                        <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                          activity.grade === 'A' ? 'bg-green-100 text-green-800' :
+                          activity.grade === 'B' ? 'bg-blue-100 text-blue-800' :
+                          activity.grade === 'C' ? 'bg-yellow-100 text-yellow-800' :
+                          activity.grade === 'D' ? 'bg-orange-100 text-orange-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
                           Grade: {activity.grade}
                         </span>
                       )}
                       {activity.duration && (
-                        <span className="bg-gray-100 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs">
+                        <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-800 text-xs">
                           {formatDuration(activity.duration)}
                         </span>
                       )}
+                      <span className="text-gray-500 text-xs">
+                        {formatTimeAgo(activity.timestamp)}
+                      </span>
                     </div>
                   </div>
-                  <span className="flex-shrink-0 ml-2 sm:ml-auto text-gray-400 text-xs">
-                    {formatTimeAgo(activity.timestamp)}
-                  </span>
                 </div>
               ))
             )}

@@ -2,7 +2,17 @@
 
 import Link from 'next/link'
 import { BarChart3, Settings, Users, LogOut, Menu, X } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
+
+interface User {
+  id: string
+  email: string
+  firstName: string
+  lastName: string
+  role: string
+  minutes: number
+}
 
 export default function ManagerLayout({
   children,
@@ -10,6 +20,65 @@ export default function ManagerLayout({
   children: React.ReactNode
 }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const pathname = usePathname()
+
+  // Check for existing session on component mount and listen for changes
+  useEffect(() => {
+    const checkAuth = () => {
+      const savedUser = localStorage.getItem('managerUser')
+      if (savedUser) {
+        try {
+          const user = JSON.parse(savedUser)
+          if (user.role === 'ADMIN') {
+            setCurrentUser(user)
+          } else {
+            localStorage.removeItem('managerUser')
+            setCurrentUser(null)
+          }
+        } catch (error) {
+          console.error('Error parsing saved manager user:', error)
+          localStorage.removeItem('managerUser')
+          setCurrentUser(null)
+        }
+      } else {
+        setCurrentUser(null)
+      }
+      setIsLoading(false)
+    }
+
+    // Check immediately
+    checkAuth()
+
+    // Listen for storage changes (when user logs in/out)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'managerUser') {
+        checkAuth()
+      }
+    }
+
+    // Listen for custom events (when user logs in/out from same tab)
+    const handleAuthChange = () => {
+      checkAuth()
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('managerAuthChange', handleAuthChange)
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('managerAuthChange', handleAuthChange)
+    }
+  }, [])
+
+  const handleLogout = () => {
+    setCurrentUser(null)
+    localStorage.removeItem('managerUser')
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(new CustomEvent('managerAuthChange'))
+    window.location.href = '/manager'
+  }
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen)
@@ -17,6 +86,25 @@ export default function ManagerLayout({
 
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false)
+  }
+
+  // If we're on the main manager page and not authenticated, don't show layout
+  if (pathname === '/manager' && !currentUser && !isLoading) {
+    return <>{children}</>
+  }
+
+  // If loading, show a simple loading state
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center bg-gray-50 min-h-screen">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    )
+  }
+
+  // If not authenticated and not on login page, don't show layout
+  if (!currentUser) {
+    return <>{children}</>
   }
 
   return (
@@ -63,14 +151,25 @@ export default function ManagerLayout({
             </nav>
 
             <div className="flex items-center space-x-2 sm:space-x-4">
-              {/* Desktop Exit Button */}
+              {/* Desktop Rep Portal Button */}
               <Link
-                href="/"
+                href="/rep"
+                className="hidden sm:flex items-center hover:bg-slate-700 px-3 py-2 rounded-md text-slate-300 hover:text-white transition-colors"
+              >
+                <svg className="mr-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span className="font-medium text-sm">Rep Portal</span>
+              </Link>
+
+              {/* Desktop Logout Button */}
+              <button
+                onClick={handleLogout}
                 className="hidden sm:flex items-center hover:bg-slate-700 px-3 py-2 rounded-md text-slate-300 hover:text-white transition-colors"
               >
                 <LogOut className="mr-2 w-4 h-4" />
-                <span className="font-medium text-sm">Exit</span>
-              </Link>
+                <span className="font-medium text-sm">Sign Out</span>
+              </button>
 
               {/* Mobile Menu Button */}
               <button
@@ -153,13 +252,25 @@ export default function ManagerLayout({
         {/* Drawer Footer */}
         <div className="right-0 bottom-0 left-0 absolute p-4 border-slate-700 border-t">
           <Link
-            href="/"
+            href="/rep"
             onClick={closeMobileMenu}
-            className="flex items-center hover:bg-slate-700 px-3 py-3 rounded-md text-slate-300 hover:text-white transition-colors"
+            className="flex items-center hover:bg-slate-700 mb-2 px-3 py-3 rounded-md text-slate-300 hover:text-white transition-colors"
+          >
+            <svg className="mr-3 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            <span className="font-medium text-sm">Rep Portal</span>
+          </Link>
+          <button
+            onClick={() => {
+              handleLogout()
+              closeMobileMenu()
+            }}
+            className="flex items-center hover:bg-slate-700 px-3 py-3 rounded-md w-full text-slate-300 hover:text-white transition-colors"
           >
             <LogOut className="mr-3 w-5 h-5" />
-            <span className="font-medium text-sm">Exit to Home</span>
-          </Link>
+            <span className="font-medium text-sm">Sign Out</span>
+          </button>
         </div>
       </div>
 
