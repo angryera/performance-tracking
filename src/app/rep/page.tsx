@@ -1,16 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Phone, User, Lock, LogIn, AlertCircle } from 'lucide-react'
+import { Phone, User, Lock, AlertCircle, BarChart3, MessageSquare, TrendingUp, LogOut, Eye, EyeOff } from 'lucide-react'
+import { Poppins, Quicksand } from 'next/font/google'
 import VAPIWidget from '@/components/VAPIWidget'
-import { Inter, Poppins, Quicksand } from 'next/font/google'
+import ClientOnly from '@/components/ClientOnly'
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const poppins = Poppins({
   weight: ['300', '400', '500', '600', '700'],
   subsets: ['latin'],
   variable: '--font-poppins'
 })
+
 const quicksand = Quicksand({
   weight: ['300', '400', '500', '600', '700'],
   subsets: ['latin'],
@@ -34,19 +35,30 @@ interface UserUsage {
   remainingMinutes: number
 }
 
+interface Conversation {
+  id: string
+  userId: string
+  transcript: string
+  mergedTranscript?: string
+  duration: number
+  grade?: string
+  summary?: string
+  createdAt: string
+}
+
 export default function RepPortal() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [userUsage, setUserUsage] = useState<UserUsage | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'management'>('dashboard')
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [isLoadingConversations, setIsLoadingConversations] = useState(false)
   const [loginData, setLoginData] = useState({
     email: '',
     password: ''
   })
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string>('')
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [showSuccess, setShowSuccess] = useState(false)
-  const [userUsage, setUserUsage] = useState<UserUsage | null>(null)
 
   // Check for existing session on component mount
   useEffect(() => {
@@ -57,6 +69,9 @@ export default function RepPortal() {
         setCurrentUser(user)
         setIsLoggedIn(true)
         fetchUserUsage(user.id)
+        if (user.role === 'ADMIN') {
+          fetchConversations()
+        }
       } catch (error) {
         console.error('Error parsing saved user:', error)
         localStorage.removeItem('user')
@@ -82,10 +97,30 @@ export default function RepPortal() {
     }
   }
 
+  const fetchConversations = async () => {
+    if (!currentUser) return
+
+    setIsLoadingConversations(true)
+    try {
+      const response = await fetch('/api/conversations')
+      if (response.ok) {
+        const data = await response.json()
+        // Filter conversations for current user only
+        const userConversations = data.filter((conv: any) => conv.userId === currentUser.id)
+        setConversations(userConversations)
+      }
+    } catch (error) {
+      console.error('Error fetching conversations:', error)
+    } finally {
+      setIsLoadingConversations(false)
+    }
+  }
+
   const handleLogout = () => {
     setCurrentUser(null)
     setIsLoggedIn(false)
     setUserUsage(null)
+    setConversations([])
     localStorage.removeItem('user')
     // Dispatch custom event to notify manager layout about auth change
     window.dispatchEvent(new CustomEvent('managerAuthChange'))
@@ -116,6 +151,10 @@ export default function RepPortal() {
         window.dispatchEvent(new CustomEvent('managerAuthChange'))
         // Fetch user usage data
         fetchUserUsage(data.user.id)
+        // If admin, fetch conversations
+        if (data.user.role === 'ADMIN') {
+          fetchConversations()
+        }
       } else {
         setError(data.error || 'Login failed')
       }
@@ -123,6 +162,36 @@ export default function RepPortal() {
       setError('Network error. Please try again.')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const onCallEnd = async (duration: number, transcript: string, mergedTranscript: Array<{ role: string, text: string }>) => {
+    if (!currentUser) return
+
+    try {
+      const response = await fetch('/api/conversations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: currentUser.id,
+          transcript,
+          mergedTranscript,
+          duration,
+        }),
+      })
+
+      if (response.ok) {
+        // Refresh conversations if user is admin
+        if (currentUser.role === 'ADMIN') {
+          fetchConversations()
+        }
+        // Refresh user usage
+        fetchUserUsage(currentUser.id)
+      }
+    } catch (error) {
+      console.error('Error saving conversation:', error)
     }
   }
 
@@ -159,7 +228,7 @@ export default function RepPortal() {
                   Email Address
                 </label>
                 <div className="relative">
-                  <User className="top-1/2 left-3 sm:left-4 absolute w-4 sm:w-5 h-4 sm:h-5 text-gray-400 -translate-y-1/2 transform" />
+                  <User className="top-1/2 left-3 sm:left-4 absolute w-4 sm:w-5 h-4 sm:h-5 text-gray-400 -translate-y-2 transform" />
                   <input
                     id="email"
                     name="email"
@@ -179,7 +248,7 @@ export default function RepPortal() {
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="top-1/2 left-3 sm:left-4 absolute w-4 sm:w-5 h-4 sm:h-5 text-gray-400 -translate-y-1/2 transform" />
+                  <Lock className="top-1/2 left-3 sm:left-4 absolute w-4 sm:w-5 h-4 sm:h-5 text-gray-400 -translate-y-2 transform" />
                   <input
                     id="password"
                     name="password"
@@ -195,16 +264,13 @@ export default function RepPortal() {
               </div>
             </div>
 
-            <div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className={`${poppins.className} group relative flex justify-center bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 px-4 sm:px-6 py-2.5 sm:py-3 border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 w-full font-semibold text-white text-sm sm:text-base disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all duration-200`}
-              >
-                <LogIn className="mr-2 sm:mr-3 w-4 sm:w-5 h-4 sm:h-5" />
-                {isLoading ? 'Signing In...' : 'Sign In'}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className={`${quicksand.className} w-full disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transform transition-all duration-200 hover:scale-105 active:scale-95 text-sm sm:text-base shadow-lg`}
+            >
+              {isLoading ? 'Signing In...' : 'Sign In'}
+            </button>
           </form>
         </div>
       </div>
@@ -212,283 +278,296 @@ export default function RepPortal() {
   }
 
   return (
-    <div className={`${poppins.variable} ${quicksand.variable} bg-gray-50 min-h-screen`} suppressHydrationWarning>
+    <div className={`${poppins.variable} ${quicksand.className} bg-gradient-to-br from-green-50 to-emerald-100 min-h-screen`} suppressHydrationWarning>
       {/* Header */}
-      <header className="bg-slate-800 shadow-lg border-slate-700 border-b">
+      <header className="z-50 relative bg-white shadow-lg border-gray-200 border-b">
         <div className="mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="flex justify-between items-center h-14 sm:h-16">
-            <div className="flex flex-1 items-center min-w-0">
-              <div className="flex flex-shrink-0 justify-center items-center bg-slate-600 mr-2 sm:mr-3 rounded-lg w-8 sm:w-10 h-8 sm:h-10">
-                <Phone className="w-4 sm:w-5 h-4 sm:h-5 text-white" />
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className={`${quicksand.className} font-bold text-white text-lg sm:text-xl lg:text-2xl tracking-tight truncate`}>
-                  LevelRep
+            <div className="flex items-center">
+              <div className="flex items-center">
+                <Phone className="mr-2 sm:mr-3 w-6 sm:w-7 h-6 sm:h-7 text-green-600" />
+                <span className={`${quicksand.className} font-semibold text-gray-900 text-lg sm:text-xl`}>
+                  Sales Rep Portal
                 </span>
-                {currentUser && (
-                  <span className={`${poppins.className} font-medium text-slate-300 text-xs sm:text-sm truncate`}>
-                    Welcome, {currentUser.firstName} {currentUser.lastName}
-                    {currentUser.role === 'ADMIN' && (
-                      <span className="bg-blue-500 ml-2 px-2 py-0.5 rounded-full text-white text-xs">
-                        Admin
-                      </span>
-                    )}
-                  </span>
-                )}
               </div>
             </div>
-            <div className="flex flex-shrink-0 items-center space-x-2 sm:space-x-4">
-              {currentUser && (
-                <div className="hidden sm:flex items-center space-x-2 text-slate-300 text-sm">
-                  <div className="bg-green-500 rounded-full w-2 h-2 animate-pulse"></div>
-                  <span>Online</span>
-                </div>
-              )}
+
+            {/* Desktop Navigation */}
+            <nav className="hidden md:flex space-x-6 lg:space-x-8">
+              <button
+                onClick={() => setActiveTab('dashboard')}
+                className={`hover:bg-gray-100 px-3 py-2 rounded-md font-medium text-sm transition-colors ${activeTab === 'dashboard'
+                  ? 'text-green-600 bg-green-50'
+                  : 'text-gray-600 hover:text-gray-900'
+                  }`}
+              >
+                Dashboard
+              </button>
+              <button
+                onClick={() => setActiveTab('management')}
+                className={`hover:bg-gray-100 px-3 py-2 rounded-md font-medium text-sm transition-colors ${activeTab === 'management'
+                  ? 'text-green-600 bg-green-50'
+                  : 'text-gray-600 hover:text-gray-900'
+                  }`}
+              >
+                My Data
+              </button>
+            </nav>
+
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              {/* Desktop Manager Portal Button (for admins) */}
               {currentUser?.role === 'ADMIN' && (
                 <a
                   href="/manager"
-                  className={`${poppins.className} bg-blue-600 hover:bg-blue-700 hover:shadow-md px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-semibold text-white transition-colors duration-200 text-xs sm:text-sm flex items-center`}
+                  className="hidden sm:flex items-center hover:bg-gray-100 px-3 py-2 rounded-md text-gray-600 hover:text-gray-900 transition-colors"
                 >
-                  <svg className="mr-1.5 w-3 sm:w-4 h-3 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                  Manager Portal
+                  <span className="font-medium text-sm">Manager Portal</span>
                 </a>
               )}
+
+              {/* Desktop Logout Button */}
               <button
                 onClick={handleLogout}
-                className={`${poppins.className} bg-slate-600 hover:bg-slate-700 hover:shadow-md px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-semibold text-white transition-colors duration-200 text-xs sm:text-sm`}
+                className="hidden sm:flex items-center hover:bg-gray-100 px-3 py-2 rounded-md text-gray-600 hover:text-gray-900 transition-colors"
               >
-                Sign Out
+                <LogOut className="mr-2 w-4 h-4" />
+                <span className="font-medium text-sm">Sign Out</span>
+              </button>
+
+              {/* Mobile Menu Button */}
+              <button
+                onClick={() => setActiveTab(activeTab === 'dashboard' ? 'management' : 'dashboard')}
+                className="md:hidden hover:bg-gray-100 p-2 rounded-md text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
               </button>
             </div>
           </div>
         </div>
       </header>
 
+      {/* Welcome Message */}
+      <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-100 border-b">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8 py-3 max-w-7xl">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-3">
+              <p className={`${poppins.className} text-sm text-gray-700`}>
+                Welcome back, <span className="font-semibold">{currentUser?.firstName} {currentUser?.lastName}</span>
+                {currentUser?.role === 'ADMIN' && (
+                  <span className="inline-flex items-center bg-blue-100 ml-2 px-2 py-0.5 rounded-full font-medium text-blue-800 text-xs">
+                    Admin
+                  </span>
+                )}
+              </p>
+            </div>
+            <div className="text-gray-500 text-sm">
+              {userUsage && `${userUsage.remainingMinutes} minutes remaining`}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="mx-auto px-4 sm:px-6 lg:px-8 pt-6 max-w-7xl">
+        <div className="border-gray-200 border-b">
+          <nav className="flex space-x-8 -mb-px">
+            <button
+              onClick={() => setActiveTab('dashboard')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'dashboard'
+                ? 'border-green-500 text-green-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+            >
+              Dashboard
+            </button>
+            <button
+              onClick={() => setActiveTab('management')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'management'
+                ? 'border-green-500 text-green-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+            >
+              My Data
+            </button>
+          </nav>
+        </div>
+      </div>
+
       {/* Main Content */}
-      <main className="mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-7xl">
-        <div className="py-4 sm:py-6">
-          <div className="text-center">
-            <h1 className={`${quicksand.className} mb-3 sm:mb-4 font-bold text-gray-900 text-2xl sm:text-3xl lg:text-4xl tracking-tight px-2`}>
-              Welcome to Your Sales Portal
-            </h1>
-            <p className={`${poppins.className} mb-6 sm:mb-8 text-gray-600 text-base sm:text-lg font-light px-4`}>
-              Start conversations with AI-powered bots to improve your sales skills
-            </p>
+      <main className="mx-auto px-4 sm:px-6 lg:px-8 py-6 max-w-7xl">
+        {activeTab === 'dashboard' ? (
+          <div className="space-y-6">
+            {/* Usage Stats */}
+            {userUsage && (
+              <div className="bg-white shadow-sm p-6 border border-gray-200 rounded-lg">
+                <h2 className={`${quicksand.className} text-lg font-semibold text-gray-900 mb-4`}>
+                  Usage Statistics
+                </h2>
+                <div className="gap-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <BarChart3 className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div className="ml-3">
+                        <p className="font-medium text-blue-600 text-sm">Total Used</p>
+                        <p className="font-semibold text-blue-900 text-lg">
+                          {formatDuration(userUsage.totalSecondsUsed)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <TrendingUp className="w-6 h-6 text-green-600" />
+                      </div>
+                      <div className="ml-3">
+                        <p className="font-medium text-green-600 text-sm">Remaining</p>
+                        <p className="font-semibold text-green-900 text-lg">
+                          {formatDuration(userUsage.remainingSeconds)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-lg">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <MessageSquare className="w-6 h-6 text-purple-600" />
+                      </div>
+                      <div className="ml-3">
+                        <p className="font-medium text-purple-600 text-sm">Granted</p>
+                        <p className="font-semibold text-purple-900 text-lg">
+                          {userUsage.grantedMinutes}m
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-4 rounded-lg">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <Phone className="w-6 h-6 text-orange-600" />
+                      </div>
+                      <div className="ml-3">
+                        <p className="font-medium text-orange-600 text-sm">Used Today</p>
+                        <p className="font-semibold text-orange-900 text-lg">
+                          {userUsage.totalMinutesUsed}m
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* VAPI Widget */}
-            <VAPIWidget
-              userId={currentUser?.id}
-              remainingSeconds={userUsage?.remainingSeconds || 0}
-              onTranscriptUpdate={(transcript) => {
-                console.log('Transcript updated:', transcript)
-              }}
-              onTimeLimitReached={() => {
-                console.log('Time limit reached, refreshing usage data...')
-                if (currentUser?.id) {
-                  fetchUserUsage(currentUser.id)
-                }
-              }}
-              onCallEnd={async (duration, transcript, mergedTranscript) => {
-                console.log('Call ended:', { duration, transcript, mergedTranscript })
-
-                // Analyze transcript with AI first
-                let grade = null
-                let summary = null
-
-                setIsAnalyzing(true)
-                try {
-                  const analysisResponse = await fetch('/api/analyze-transcript', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ transcript }),
-                  })
-
-                  if (analysisResponse.ok) {
-                    const analysis = await analysisResponse.json()
-                    grade = analysis.grade
-                    summary = analysis.summary
-                    console.log('AI analysis completed:', analysis)
-                  } else {
-                    console.error('Failed to analyze transcript')
-                  }
-                } catch (error) {
-                  console.error('Error analyzing transcript:', error)
-                } finally {
-                  setIsAnalyzing(false)
-                }
-
-                // Save conversation to database with AI analysis, accurate duration, and merged transcript
-                setIsSaving(true)
-                try {
-                  const response = await fetch('/api/conversations', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                      userId: currentUser?.id,
-                      transcript,
-                      mergedTranscript, // Add the merged transcript with speaker identification
-                      duration, // Now using accurate duration from timestamps
-                      grade,
-                      summary
-                    }),
-                  })
-
-                  if (response.ok) {
-                    console.log('Conversation saved successfully with AI analysis, accurate duration, and merged transcript:', duration)
-                  } else {
-                    console.error('Failed to save conversation')
-                  }
-                } catch (error) {
-                  console.error('Error saving conversation:', error)
-                } finally {
-                  setIsSaving(false)
-                  setShowSuccess(true)
-                  setTimeout(() => setShowSuccess(false), 3000) // Hide after 3 seconds
-                  // Refresh user usage data
-                  if (currentUser?.id) {
-                    fetchUserUsage(currentUser.id)
-                  }
-                }
-              }}
-            />
-
-            {/* Performance Summary */}
-            <div className="gap-4 sm:gap-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mx-auto mt-6 sm:mt-8 max-w-4xl">
-              <div className="bg-white shadow-lg p-4 sm:p-6 border border-gray-100 rounded-xl">
-                <div className="text-center">
-                  <div className={`${quicksand.className} font-bold text-gray-900 text-2xl sm:text-3xl mb-1 sm:mb-2`}>
-                    {userUsage ? formatDuration(userUsage.totalSecondsUsed) : '0:00'}
-                  </div>
-                  <div className={`${poppins.className} text-gray-600 text-xs sm:text-sm font-medium`}>Time Used</div>
-                  {userUsage && (
-                    <div className={`${poppins.className} text-gray-500 text-xs mt-1`}>
-                      of {userUsage.grantedMinutes} min granted
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="bg-white shadow-lg p-4 sm:p-6 border border-gray-100 rounded-xl">
-                <div className="text-center">
-                  <div className={`${quicksand.className} font-bold text-green-600 text-xl sm:text-2xl mb-1 sm:mb-2`}>
-                    {userUsage ? formatDuration(userUsage.remainingSeconds) : '0:00'}
-                  </div>
-                  <div className={`${poppins.className} text-gray-600 text-xs sm:text-sm font-medium`}>Time Remaining</div>
-                  {userUsage && userUsage.remainingMinutes <= 10 && (
-                    <div className={`${poppins.className} text-orange-500 text-xs mt-1 font-medium`}>
-                      Low balance
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="sm:col-span-2 lg:col-span-1 bg-white shadow-lg p-4 sm:p-6 border border-gray-100 rounded-xl">
-                <div className="text-center">
-                  <div className={`${poppins.className} font-bold text-gray-900 text-sm sm:text-lg mb-1 sm:mb-2 break-all`}>
-                    {currentUser ? currentUser.email : 'N/A'}
-                  </div>
-                  <div className={`${poppins.className} text-gray-600 text-xs sm:text-sm font-medium`}>Email</div>
-                </div>
-              </div>
+            <div className="bg-white shadow-sm p-6 border border-gray-200 rounded-lg">
+              <h2 className={`${quicksand.className} text-lg font-semibold text-gray-900 mb-4`}>
+                Start a Call
+              </h2>
+              <ClientOnly>
+                <VAPIWidget
+                  onCallEnd={onCallEnd}
+                  remainingSeconds={userUsage?.remainingSeconds || 0}
+                />
+              </ClientOnly>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="space-y-6">
+            {/* My Conversations */}
+            <div className="bg-white shadow-sm p-6 border border-gray-200 rounded-lg">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className={`${quicksand.className} text-lg font-semibold text-gray-900`}>
+                  My Conversations
+                </h2>
+                <button
+                  onClick={fetchConversations}
+                  disabled={isLoadingConversations}
+                  className="inline-flex items-center bg-green-600 hover:bg-green-700 disabled:opacity-50 px-3 py-2 border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 font-medium text-white text-sm transition-colors"
+                >
+                  {isLoadingConversations ? 'Loading...' : 'Refresh'}
+                </button>
+              </div>
+
+              {isLoadingConversations ? (
+                <div className="py-8 text-center">
+                  <div className="mx-auto border-green-600 border-b-2 rounded-full w-8 h-8 animate-spin"></div>
+                  <p className="mt-2 text-gray-500">Loading conversations...</p>
+                </div>
+              ) : conversations.length === 0 ? (
+                <div className="py-8 text-center">
+                  <MessageSquare className="mx-auto w-12 h-12 text-gray-400" />
+                  <h3 className="mt-2 font-medium text-gray-900 text-sm">No conversations yet</h3>
+                  <p className="mt-1 text-gray-500 text-sm">Start making calls to see your conversation history here.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {conversations.map((conversation) => (
+                    <div key={conversation.id} className="hover:bg-gray-50 p-4 border border-gray-200 rounded-lg transition-colors">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <span className="inline-flex items-center bg-green-100 px-2.5 py-0.5 rounded-full font-medium text-green-800 text-xs">
+                              {formatDuration(conversation.duration)}
+                            </span>
+                            {conversation.grade && (
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${conversation.grade === 'A' ? 'bg-green-100 text-green-800' :
+                                conversation.grade === 'B' ? 'bg-blue-100 text-blue-800' :
+                                  conversation.grade === 'C' ? 'bg-yellow-100 text-yellow-800' :
+                                    conversation.grade === 'D' ? 'bg-orange-100 text-orange-800' :
+                                      'bg-red-100 text-red-800'
+                                }`}>
+                                Grade: {conversation.grade}
+                              </span>
+                            )}
+                            <span className="text-gray-500 text-sm">
+                              {new Date(conversation.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+
+                          {conversation.mergedTranscript ? (
+                            <div className="space-y-2">
+                              {JSON.parse(conversation.mergedTranscript).map((message: any, index: number) => (
+                                <div key={index} className={`p-2 rounded ${message.role === 'user' ? 'bg-blue-50 border-l-4 border-blue-400' : 'bg-gray-50 border-l-4 border-gray-400'
+                                  }`}>
+                                  <div className="flex items-center space-x-2 mb-1">
+                                    <span className={`text-xs font-medium px-2 py-1 rounded ${message.role === 'user' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                                      }`}>
+                                      {message.role === 'user' ? 'Me' : 'AI'}
+                                    </span>
+                                  </div>
+                                  <p className="text-gray-700 text-sm">{message.text}</p>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-gray-600 text-sm line-clamp-3">
+                              {conversation.transcript || 'No transcript available'}
+                            </p>
+                          )}
+
+                          {conversation.summary && (
+                            <div className="bg-blue-50 mt-3 p-3 border-blue-400 border-l-4 rounded">
+                              <p className="mb-1 font-medium text-blue-800 text-sm">Summary:</p>
+                              <p className="text-blue-700 text-sm">{conversation.summary}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </main>
-
-      {/* Analyzing Overlay */}
-      {isAnalyzing && (
-        <div className="z-50 fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
-          <div className="bg-white shadow-2xl p-6 sm:p-8 border border-gray-200 rounded-2xl w-full max-w-sm sm:max-w-md text-center">
-            <div className="mx-auto mb-4 sm:mb-6 border-purple-400 border-b-2 rounded-full w-12 sm:w-16 h-12 sm:h-16 animate-spin"></div>
-            <h3 className={`${quicksand.className} font-bold text-purple-600 text-xl sm:text-2xl mb-2 sm:mb-3`}>
-              Analyzing Performance
-            </h3>
-            <p className={`${poppins.className} text-gray-600 text-base sm:text-lg mb-4 sm:mb-6`}>
-              AI is evaluating your conversation and generating insights...
-            </p>
-            <div className="space-y-2 sm:space-y-3 text-left">
-              <div className="flex items-center text-gray-500 text-xs sm:text-sm">
-                <div className="flex-shrink-0 bg-purple-400 mr-2 sm:mr-3 rounded-full w-1.5 sm:w-2 h-1.5 sm:h-2"></div>
-                <span>Processing conversation transcript</span>
-              </div>
-              <div className="flex items-center text-gray-500 text-xs sm:text-sm">
-                <div className="flex-shrink-0 bg-purple-400 mr-2 sm:mr-3 rounded-full w-1.5 sm:w-2 h-1.5 sm:h-2"></div>
-                <span>Evaluating sales techniques</span>
-              </div>
-              <div className="flex items-center text-gray-500 text-xs sm:text-sm">
-                <div className="flex-shrink-0 bg-purple-400 mr-2 sm:mr-3 rounded-full w-1.5 sm:w-2 h-1.5 sm:h-2"></div>
-                <span>Generating performance grade</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Saving Overlay */}
-      {isSaving && (
-        <div className="z-50 fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
-          <div className="bg-white shadow-2xl p-6 sm:p-8 border border-gray-200 rounded-2xl w-full max-w-sm sm:max-w-md text-center">
-            <div className="mx-auto mb-4 sm:mb-6 border-b-2 border-blue-400 rounded-full w-12 sm:w-16 h-12 sm:h-16 animate-spin"></div>
-            <h3 className={`${quicksand.className} font-bold text-blue-600 text-xl sm:text-2xl mb-2 sm:mb-3`}>
-              Saving Conversation
-            </h3>
-            <p className={`${poppins.className} text-gray-600 text-base sm:text-lg mb-4 sm:mb-6`}>
-              Storing your session data and updating your usage...
-            </p>
-            <div className="space-y-2 sm:space-y-3 text-left">
-              <div className="flex items-center text-gray-500 text-xs sm:text-sm">
-                <div className="flex-shrink-0 bg-blue-400 mr-2 sm:mr-3 rounded-full w-1.5 sm:w-2 h-1.5 sm:h-2"></div>
-                <span>Saving conversation transcript</span>
-              </div>
-              <div className="flex items-center text-gray-500 text-xs sm:text-sm">
-                <div className="flex-shrink-0 bg-blue-400 mr-2 sm:mr-3 rounded-full w-1.5 sm:w-2 h-1.5 sm:h-2"></div>
-                <span>Storing performance analysis</span>
-              </div>
-              <div className="flex items-center text-gray-500 text-xs sm:text-sm">
-                <div className="flex-shrink-0 bg-blue-400 mr-2 sm:mr-3 rounded-full w-1.5 sm:w-2 h-1.5 sm:h-2"></div>
-                <span>Updating usage statistics</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Success Message Overlay */}
-      {showSuccess && (
-        <div className="z-50 fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
-          <div className="bg-white shadow-2xl p-6 sm:p-8 border border-gray-200 rounded-2xl w-full max-w-sm sm:max-w-md text-center">
-            <div className="flex justify-center items-center bg-green-100 mx-auto mb-4 sm:mb-6 rounded-full w-12 sm:w-16 h-12 sm:h-16">
-              <svg className="w-6 sm:w-8 h-6 sm:h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h3 className={`${quicksand.className} font-bold text-green-800 text-xl sm:text-2xl mb-2 sm:mb-3`}>
-              Session Complete!
-            </h3>
-            <p className={`${poppins.className} text-green-700 text-base sm:text-lg`}>
-              Your conversation has been analyzed and saved successfully.
-            </p>
-            <div className="space-y-1 sm:space-y-2 mt-4 sm:mt-6 text-left">
-              <div className="flex items-center text-gray-600 text-xs sm:text-sm">
-                <div className="flex-shrink-0 bg-green-400 mr-2 sm:mr-3 rounded-full w-1.5 sm:w-2 h-1.5 sm:h-2"></div>
-                <span>Performance analysis completed</span>
-              </div>
-              <div className="flex items-center text-gray-600 text-xs sm:text-sm">
-                <div className="flex-shrink-0 bg-green-400 mr-2 sm:mr-3 rounded-full w-1.5 sm:w-2 h-1.5 sm:h-2"></div>
-                <span>Conversation saved to database</span>
-              </div>
-              <div className="flex items-center text-gray-600 text-xs sm:text-sm">
-                <div className="flex-shrink-0 bg-green-400 mr-2 sm:mr-3 rounded-full w-1.5 sm:w-2 h-1.5 sm:h-2"></div>
-                <span>Usage statistics updated</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 } 

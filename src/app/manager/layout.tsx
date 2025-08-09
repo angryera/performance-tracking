@@ -4,6 +4,12 @@ import Link from 'next/link'
 import { BarChart3, Settings, Users, LogOut, Menu, X } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
+import { Quicksand } from 'next/font/google'
+
+const quicksand = Quicksand({ 
+  weight: ['300', '400', '500', '600', '700'],
+  subsets: ['latin']
+})
 
 interface User {
   id: string
@@ -108,7 +114,7 @@ export default function ManagerLayout({
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className={`${quicksand.className} bg-gray-50 min-h-screen`}>
       {/* Header */}
       <header className="z-50 relative bg-slate-800 shadow-lg border-slate-700 border-b">
         <div className="mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
@@ -116,7 +122,7 @@ export default function ManagerLayout({
             <div className="flex items-center">
               <Link href="/manager" className="flex items-center">
                 <BarChart3 className="mr-2 sm:mr-3 w-6 sm:w-7 h-6 sm:h-7 text-slate-300" />
-                <span className="font-semibold text-white text-lg sm:text-xl">
+                <span className={`${quicksand.className} font-semibold text-white text-lg sm:text-xl`}>
                   Manager Dashboard
                 </span>
               </Link>
@@ -203,7 +209,7 @@ export default function ManagerLayout({
         <div className="flex justify-between items-center p-4 border-slate-700 border-b">
           <div className="flex items-center">
             <BarChart3 className="mr-3 w-6 h-6 text-slate-300" />
-            <span className="font-semibold text-white text-lg">Menu</span>
+            <span className={`${quicksand.className} font-semibold text-white text-lg`}>Menu</span>
           </div>
           <button
             onClick={closeMobileMenu}
@@ -280,4 +286,4 @@ export default function ManagerLayout({
       </main>
     </div>
   )
-} 
+}
