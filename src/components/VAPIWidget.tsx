@@ -127,6 +127,10 @@ export default function VAPIWidget({
     setError(null)
     timeLimitReachedRef.current = false
 
+    // Reset transcript state for new call
+    setTranscript([])
+    transcriptRef.current = []
+
     // Get user media for mute functionality
     await getUserMedia()
 
@@ -361,7 +365,15 @@ export default function VAPIWidget({
 
       // Call the onCallEnd callback with accurate duration and transcript
       const transcriptStr = transcriptRef.current.map((t: any) => t.text).join(' ')
-      onCallEnd?.(finalDuration, transcriptStr, getMergedTranscript())
+      const mergedTranscriptData = getMergedTranscript()
+      
+      console.log('🔍 VAPIWidget - Call ending with:')
+      console.log('  - Duration:', finalDuration)
+      console.log('  - Transcript:', transcriptStr)
+      console.log('  - MergedTranscript:', mergedTranscriptData)
+      console.log('  - Transcript array:', transcriptRef.current)
+      
+      onCallEnd?.(finalDuration, transcriptStr, mergedTranscriptData)
 
       // Reset call tracking
       setCurrentCallId(null)
@@ -381,6 +393,8 @@ export default function VAPIWidget({
 
       const raw = (message.transcript ?? message.text ?? '').trim()
       const role = message.role || (message.sender === 'user' ? 'user' : 'assistant')
+
+      console.log('🔍 VAPIWidget - Received message:', { type: message.type, isFinal, raw, role })
 
       if (!raw) return
       if (!isFinal) return // comment out this line if you want to show streaming partials
@@ -448,14 +462,14 @@ export default function VAPIWidget({
 
   // Function to merge consecutive messages from the same role
   const getMergedTranscript = () => {
-    if (transcript.length === 0) return []
+    if (transcriptRef.current.length === 0) return []
     
     const merged: any[] = []
-    let currentRole = transcript[0].role
-    let currentText = transcript[0].text
+    let currentRole = transcriptRef.current[0].role
+    let currentText = transcriptRef.current[0].text
     
-    for (let i = 1; i < transcript.length; i++) {
-      const message = transcript[i]
+    for (let i = 1; i < transcriptRef.current.length; i++) {
+      const message = transcriptRef.current[i]
       
       if (message.role === currentRole) {
         // Same role, merge the text
@@ -475,12 +489,17 @@ export default function VAPIWidget({
   }
 
   useEffect(() => {
-    console.log(transcriptRef.current)
+    console.log('🔍 VAPIWidget - transcript state changed:', transcript)
+    console.log('🔍 VAPIWidget - transcriptRef.current:', transcriptRef.current)
+  }, [transcript])
+
+  useEffect(() => {
+    console.log('🔍 VAPIWidget - transcriptRef.current changed:', transcriptRef.current)
   }, [transcriptRef.current])
 
   return (
     <>
-      <div className="bg-white shadow-lg mx-auto p-6 rounded-lg max-w-4xl">
+      <div className="bg-white mx-auto p-6 rounded-lg max-w-7xl">
         {/* Training Mode Selection */}
         {!isCallActive && (
           <div className="mb-6">

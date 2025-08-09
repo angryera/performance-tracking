@@ -191,6 +191,13 @@ export default function RepPortal() {
   const onCallEnd = async (duration: number, transcript: string, mergedTranscript: Array<{ role: string, text: string }>) => {
     if (!currentUser) return
 
+    console.log('🔍 Rep Page - onCallEnd received:')
+    console.log('  - Duration:', duration)
+    console.log('  - Transcript:', transcript)
+    console.log('  - MergedTranscript:', mergedTranscript)
+    console.log('  - MergedTranscript type:', typeof mergedTranscript)
+    console.log('  - MergedTranscript length:', mergedTranscript?.length)
+
     try {
       const response = await fetch('/api/conversations', {
         method: 'POST',
@@ -455,17 +462,12 @@ export default function RepPortal() {
             )}
 
             {/* VAPI Widget */}
-            <div className="bg-white shadow-sm p-6 border border-gray-200 rounded-lg">
-              <h2 className={`${quicksand.className} text-lg font-semibold text-gray-900 mb-4`}>
-                Start a Call
-              </h2>
-              <ClientOnly>
-                <VAPIWidget
-                  onCallEnd={onCallEnd}
-                  remainingSeconds={userUsage?.remainingSeconds || 0}
-                />
-              </ClientOnly>
-            </div>
+            <ClientOnly>
+              <VAPIWidget
+                onCallEnd={onCallEnd}
+                remainingSeconds={userUsage?.remainingSeconds || 0}
+              />
+            </ClientOnly>
           </div>
         ) : (
           <div className="space-y-6">

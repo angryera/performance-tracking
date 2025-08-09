@@ -11,6 +11,14 @@ export async function POST(request: NextRequest) {
     const { userId, transcript, mergedTranscript, duration, grade, summary } =
       body;
 
+    console.log('🔍 Backend API - Received conversation data:')
+    console.log('  - userId:', userId)
+    console.log('  - transcript:', transcript)
+    console.log('  - mergedTranscript:', mergedTranscript)
+    console.log('  - mergedTranscript type:', typeof mergedTranscript)
+    console.log('  - mergedTranscript isArray:', Array.isArray(mergedTranscript))
+    console.log('  - duration:', duration)
+
     // Validate required fields
     if (!userId || !transcript || !duration) {
       return NextResponse.json(
@@ -23,6 +31,9 @@ export async function POST(request: NextRequest) {
     let mergedTranscriptJson = null;
     if (mergedTranscript && Array.isArray(mergedTranscript)) {
       mergedTranscriptJson = JSON.stringify(mergedTranscript);
+      console.log('  - mergedTranscriptJson:', mergedTranscriptJson)
+    } else {
+      console.log('  - mergedTranscript not processed (not array or empty)')
     }
 
     // Create conversation record with type assertion
