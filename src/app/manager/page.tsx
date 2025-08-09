@@ -112,17 +112,17 @@ export default function ManagerDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="font-bold text-gray-900 text-3xl">Dashboard Overview</h1>
-          <p className="mt-1 text-gray-600">Monitor your sales team's performance</p>
+          <h1 className="font-bold text-gray-900 text-2xl sm:text-3xl">Dashboard Overview</h1>
+          <p className="mt-1 text-gray-600 text-sm sm:text-base">Monitor your sales team's performance</p>
         </div>
         <button
           onClick={handleImportData}
           disabled={isImporting}
-          className="inline-flex items-center bg-blue-600 hover:bg-blue-700 disabled:opacity-50 px-4 py-2 rounded-lg font-medium text-white disabled:cursor-not-allowed"
+          className="inline-flex justify-center items-center bg-blue-600 hover:bg-blue-700 disabled:opacity-50 px-3 sm:px-4 py-2 rounded-lg w-full sm:w-auto font-medium text-white text-sm sm:text-base disabled:cursor-not-allowed"
         >
           <Download className="mr-2 w-4 h-4" />
           {isImporting ? 'Importing...' : 'Import from Google Sheets'}
@@ -131,64 +131,64 @@ export default function ManagerDashboard() {
 
       {/* Import Status */}
       {importStatus && (
-        <div className={`p-4 rounded-lg ${
+        <div className={`p-3 sm:p-4 rounded-lg ${
           importStatus.includes('successfully') 
             ? 'bg-green-50 text-green-800 border border-green-200' 
             : 'bg-red-50 text-red-800 border border-red-200'
         }`}>
           <div className="flex items-center">
-            <AlertCircle className="mr-2 w-4 h-4" />
-            {importStatus}
+            <AlertCircle className="flex-shrink-0 mr-2 w-4 h-4" />
+            <span className="text-sm sm:text-base">{importStatus}</span>
           </div>
         </div>
       )}
 
       {/* Stats Cards */}
-      <div className="gap-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-        <div className="bg-white shadow p-6 rounded-lg">
+      <div className="gap-4 sm:gap-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
           <div className="flex items-center">
             <div className="bg-blue-100 p-2 rounded-lg">
-              <Users className="w-6 h-6 text-blue-600" />
+              <Users className="w-5 sm:w-6 h-5 sm:h-6 text-blue-600" />
             </div>
-            <div className="ml-4">
-              <p className="font-medium text-gray-600 text-sm">Total Reps</p>
-              <p className="font-semibold text-gray-900 text-2xl">{stats.totalReps}</p>
+            <div className="ml-3 sm:ml-4">
+              <p className="font-medium text-gray-600 text-xs sm:text-sm">Total Reps</p>
+              <p className="font-semibold text-gray-900 text-xl sm:text-2xl">{stats.totalReps}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white shadow p-6 rounded-lg">
+        <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
           <div className="flex items-center">
             <div className="bg-green-100 p-2 rounded-lg">
-              <Phone className="w-6 h-6 text-green-600" />
+              <Phone className="w-5 sm:w-6 h-5 sm:h-6 text-green-600" />
             </div>
-            <div className="ml-4">
-              <p className="font-medium text-gray-600 text-sm">Total Calls</p>
-              <p className="font-semibold text-gray-900 text-2xl">{stats.totalCalls}</p>
+            <div className="ml-3 sm:ml-4">
+              <p className="font-medium text-gray-600 text-xs sm:text-sm">Total Calls</p>
+              <p className="font-semibold text-gray-900 text-xl sm:text-2xl">{stats.totalCalls}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white shadow p-6 rounded-lg">
+        <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
           <div className="flex items-center">
             <div className="bg-purple-100 p-2 rounded-lg">
-              <TrendingUp className="w-6 h-6 text-purple-600" />
+              <TrendingUp className="w-5 sm:w-6 h-5 sm:h-6 text-purple-600" />
             </div>
-            <div className="ml-4">
-              <p className="font-medium text-gray-600 text-sm">Avg Grade</p>
-              <p className="font-semibold text-gray-900 text-2xl">{stats.avgGrade}</p>
+            <div className="ml-3 sm:ml-4">
+              <p className="font-medium text-gray-600 text-xs sm:text-sm">Avg Grade</p>
+              <p className="font-semibold text-gray-900 text-xl sm:text-2xl">{stats.avgGrade}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white shadow p-6 rounded-lg">
+        <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
           <div className="flex items-center">
             <div className="bg-orange-100 p-2 rounded-lg">
-              <TrendingUp className="w-6 h-6 text-orange-600" />
+              <TrendingUp className="w-5 sm:w-6 h-5 sm:h-6 text-orange-600" />
             </div>
-            <div className="ml-4">
-              <p className="font-medium text-gray-600 text-sm">Minutes Used</p>
-              <p className="font-semibold text-gray-900 text-2xl">{stats.totalMinutes}</p>
+            <div className="ml-3 sm:ml-4">
+              <p className="font-medium text-gray-600 text-xs sm:text-sm">Minutes Used</p>
+              <p className="font-semibold text-gray-900 text-xl sm:text-2xl">{stats.totalMinutes}</p>
               <p className="text-gray-500 text-xs">of {stats.grantedMinutes} granted</p>
             </div>
           </div>
@@ -196,67 +196,69 @@ export default function ManagerDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="gap-6 grid grid-cols-1 md:grid-cols-2">
-        <div className="bg-white shadow p-6 rounded-lg">
-          <h3 className="mb-4 font-semibold text-gray-900 text-lg">Quick Actions</h3>
-          <div className="space-y-3">
+      <div className="gap-4 sm:gap-6 grid grid-cols-1 lg:grid-cols-2">
+        <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
+          <h3 className="mb-3 sm:mb-4 font-semibold text-gray-900 text-base sm:text-lg">Quick Actions</h3>
+          <div className="space-y-2 sm:space-y-3">
             <a
               href="/manager/conversations"
-              className="block hover:bg-gray-50 p-3 border border-gray-200 rounded-lg transition-colors"
+              className="block hover:bg-gray-50 p-2.5 sm:p-3 border border-gray-200 rounded-lg transition-colors"
             >
               <div className="flex justify-between items-center">
-                <span className="font-medium text-gray-900 text-sm">View Conversations</span>
+                <span className="font-medium text-gray-900 text-xs sm:text-sm">View Conversations</span>
                 <span className="text-gray-500 text-xs">→</span>
               </div>
             </a>
             <a
               href="/manager/performance"
-              className="block hover:bg-gray-50 p-3 border border-gray-200 rounded-lg transition-colors"
+              className="block hover:bg-gray-50 p-2.5 sm:p-3 border border-gray-200 rounded-lg transition-colors"
             >
               <div className="flex justify-between items-center">
-                <span className="font-medium text-gray-900 text-sm">Performance Analytics</span>
+                <span className="font-medium text-gray-900 text-xs sm:text-sm">Performance Analytics</span>
                 <span className="text-gray-500 text-xs">→</span>
               </div>
             </a>
             <a
               href="/manager/config"
-              className="block hover:bg-gray-50 p-3 border border-gray-200 rounded-lg transition-colors"
+              className="block hover:bg-gray-50 p-2.5 sm:p-3 border border-gray-200 rounded-lg transition-colors"
             >
               <div className="flex justify-between items-center">
-                <span className="font-medium text-gray-900 text-sm">Configure Google Sheets</span>
+                <span className="font-medium text-gray-900 text-xs sm:text-sm">Configure Google Sheets</span>
                 <span className="text-gray-500 text-xs">→</span>
               </div>
             </a>
           </div>
         </div>
 
-        <div className="bg-white shadow p-6 rounded-lg">
-          <h3 className="mb-4 font-semibold text-gray-900 text-lg">Recent Activity</h3>
-          <div className="space-y-3">
+        <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
+          <h3 className="mb-3 sm:mb-4 font-semibold text-gray-900 text-base sm:text-lg">Recent Activity</h3>
+          <div className="space-y-2 sm:space-y-3">
             {recentActivities.length === 0 ? (
-              <div className="py-4 text-center">
-                <p className="text-gray-500 text-sm">No recent activity</p>
+              <div className="py-3 sm:py-4 text-center">
+                <p className="text-gray-500 text-xs sm:text-sm">No recent activity</p>
               </div>
             ) : (
               recentActivities.map((activity) => (
-                <div key={activity.id} className="flex items-center text-gray-600 text-sm">
-                  <div className={`mr-3 rounded-full w-2 h-2 ${
+                <div key={activity.id} className="flex items-center text-gray-600 text-xs sm:text-sm">
+                  <div className={`mr-2 sm:mr-3 rounded-full w-1.5 h-1.5 sm:w-2 sm:h-2 flex-shrink-0 ${
                     activity.type === 'conversation' ? 'bg-green-400' : 'bg-blue-400'
                   }`}></div>
-                  <div className="flex-1">
-                    <span>{activity.message}</span>
-                    {activity.grade && (
-                      <span className="bg-gray-100 ml-2 px-2 py-1 rounded text-xs">
-                        Grade: {activity.grade}
-                      </span>
-                    )}
-                    {activity.duration && (
-                      <span className="bg-gray-100 ml-2 px-2 py-1 rounded text-xs">
-                        {formatDuration(activity.duration)}
-                      </span>
-                    )}
+                  <div className="flex-1 min-w-0">
+                    <span className="block truncate">{activity.message}</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {activity.grade && (
+                        <span className="bg-gray-100 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs">
+                          Grade: {activity.grade}
+                        </span>
+                      )}
+                      {activity.duration && (
+                        <span className="bg-gray-100 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs">
+                          {formatDuration(activity.duration)}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <span className="ml-auto text-gray-400 text-xs">
+                  <span className="flex-shrink-0 ml-2 sm:ml-auto text-gray-400 text-xs">
                     {formatTimeAgo(activity.timestamp)}
                   </span>
                 </div>

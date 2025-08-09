@@ -20,7 +20,7 @@ export default function ConfigPage() {
   const handleSave = async () => {
     setIsSaving(true)
     setStatus(null)
-    
+
     try {
       const response = await fetch('/api/manager/config', {
         method: 'POST',
@@ -29,7 +29,7 @@ export default function ConfigPage() {
         },
         body: JSON.stringify(formData),
       })
-      
+
       if (response.ok) {
         setStatus({ type: 'success', message: 'Configuration saved successfully!' })
       } else {
@@ -45,7 +45,7 @@ export default function ConfigPage() {
   const handleTestConnection = async () => {
     setIsTesting(true)
     setStatus(null)
-    
+
     try {
       const response = await fetch('/api/manager/test-connection', {
         method: 'POST',
@@ -54,7 +54,7 @@ export default function ConfigPage() {
         },
         body: JSON.stringify(formData),
       })
-      
+
       if (response.ok) {
         setStatus({ type: 'success', message: 'Connection test successful! Google Sheets is accessible.' })
       } else {
@@ -68,38 +68,37 @@ export default function ConfigPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div>
-        <h1 className="font-bold text-gray-900 text-3xl">Configuration</h1>
-        <p className="mt-1 text-gray-600">Configure Google Sheets integration for data import</p>
+        <h1 className="font-bold text-gray-900 text-2xl sm:text-3xl">Configuration</h1>
+        <p className="mt-1 text-gray-600 text-sm sm:text-base">Configure Google Sheets integration for data import</p>
       </div>
 
       {/* Status Message */}
       {status && (
-        <div className={`p-4 rounded-lg border ${
-          status.type === 'success' 
-            ? 'bg-green-50 text-green-800 border-green-200' 
-            : status.type === 'error'
+        <div className={`p-3 sm:p-4 rounded-lg border ${status.type === 'success'
+          ? 'bg-green-50 text-green-800 border-green-200'
+          : status.type === 'error'
             ? 'bg-red-50 text-red-800 border-red-200'
             : 'bg-blue-50 text-blue-800 border-blue-200'
-        }`}>
+          }`}>
           <div className="flex items-center">
             {status.type === 'success' ? (
-              <CheckCircle className="mr-2 w-4 h-4" />
+              <CheckCircle className="flex-shrink-0 mr-2 w-4 h-4" />
             ) : (
-              <AlertCircle className="mr-2 w-4 h-4" />
+              <AlertCircle className="flex-shrink-0 mr-2 w-4 h-4" />
             )}
-            {status.message}
+            <span className="text-sm sm:text-base">{status.message}</span>
           </div>
         </div>
       )}
 
       {/* Configuration Form */}
-      <div className="bg-white shadow p-6 rounded-lg">
-        <h2 className="mb-6 font-semibold text-gray-900 text-lg">Google Sheets Configuration</h2>
-        
-        <div className="space-y-6">
+      <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
+        <h2 className="mb-4 sm:mb-6 font-semibold text-gray-900 text-base sm:text-lg">Google Sheets Configuration</h2>
+
+        <div className="space-y-4 sm:space-y-6">
           {/* Spreadsheet ID */}
           <div>
             <label htmlFor="spreadsheetId" className="block mb-2 font-medium text-gray-700 text-sm">
@@ -112,9 +111,9 @@ export default function ConfigPage() {
               value={formData.spreadsheetId}
               onChange={handleInputChange}
               placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
-              className="px-3 py-2 border border-gray-300 focus:border-transparent rounded-lg focus:ring-2 focus:ring-blue-500 w-full"
+              className="px-3 py-2 border border-gray-300 focus:border-transparent rounded-lg focus:ring-2 focus:ring-blue-500 w-full text-sm sm:text-base"
             />
-            <p className="mt-1 text-gray-500 text-xs">
+            <p className="mt-1 overflow-hidden text-gray-500 text-xs text-ellipsis whitespace-nowrap">
               Found in the URL: https://docs.google.com/spreadsheets/d/[SPREADSHEET_ID]/edit
             </p>
           </div>
@@ -131,7 +130,7 @@ export default function ConfigPage() {
               value={formData.range}
               onChange={handleInputChange}
               placeholder="A:F"
-              className="px-3 py-2 border border-gray-300 focus:border-transparent rounded-lg focus:ring-2 focus:ring-blue-500 w-full"
+              className="px-3 py-2 border border-gray-300 focus:border-transparent rounded-lg focus:ring-2 focus:ring-blue-500 w-full text-sm sm:text-base"
             />
             <p className="mt-1 text-gray-500 text-xs">
               Range to import (e.g., A:F for columns A through F)
@@ -139,9 +138,9 @@ export default function ConfigPage() {
           </div>
 
           {/* Environment Variables Info */}
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <h4 className="mb-2 font-medium text-blue-900">Google Sheets Credentials</h4>
-            <p className="mb-2 text-blue-800 text-sm">
+          <div className="bg-blue-50 p-3 sm:p-4 rounded-lg">
+            <h4 className="mb-2 font-medium text-blue-900 text-sm sm:text-base">Google Sheets Credentials</h4>
+            <p className="mb-2 text-blue-800 text-xs sm:text-sm">
               Make sure you have set up the following environment variables in your .env file:
             </p>
             <div className="space-y-1 font-mono text-blue-700 text-xs">
@@ -152,20 +151,20 @@ export default function ConfigPage() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex space-x-4 mt-8">
+        <div className="flex sm:flex-row flex-col sm:space-x-4 space-y-3 sm:space-y-0 mt-6 sm:mt-8">
           <button
             onClick={handleTestConnection}
             disabled={isTesting || !formData.spreadsheetId}
-            className="inline-flex items-center bg-white hover:bg-gray-50 disabled:opacity-50 px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 text-sm disabled:cursor-not-allowed"
+            className="inline-flex justify-center items-center bg-white hover:bg-gray-50 disabled:opacity-50 px-3 sm:px-4 py-2 border border-gray-300 rounded-lg w-full sm:w-auto font-medium text-gray-700 text-sm disabled:cursor-not-allowed"
           >
             <Wifi className="mr-2 w-4 h-4" />
             {isTesting ? 'Testing...' : 'Test Connection'}
           </button>
-          
+
           <button
             onClick={handleSave}
             disabled={isSaving || !formData.spreadsheetId}
-            className="inline-flex items-center bg-blue-600 hover:bg-blue-700 disabled:opacity-50 px-4 py-2 rounded-lg font-medium text-white disabled:cursor-not-allowed"
+            className="inline-flex justify-center items-center bg-blue-600 hover:bg-blue-700 disabled:opacity-50 px-3 sm:px-4 py-2 rounded-lg w-full sm:w-auto font-medium text-white text-sm disabled:cursor-not-allowed"
           >
             <Save className="mr-2 w-4 h-4" />
             {isSaving ? 'Saving...' : 'Save Configuration'}
@@ -174,9 +173,9 @@ export default function ConfigPage() {
       </div>
 
       {/* Instructions */}
-      <div className="bg-blue-50 p-6 rounded-lg">
-        <h3 className="mb-4 font-semibold text-blue-900 text-lg">Setup Instructions</h3>
-        <div className="space-y-3 text-blue-800 text-sm">
+      <div className="bg-blue-50 p-4 sm:p-6 rounded-lg">
+        <h3 className="mb-3 sm:mb-4 font-semibold text-blue-900 text-base sm:text-lg">Setup Instructions</h3>
+        <div className="space-y-2 sm:space-y-3 text-blue-800 text-xs sm:text-sm">
           <p>1. Create a Google Service Account in your Google Cloud Console</p>
           <p>2. Download the JSON credentials file</p>
           <p>3. Add the credentials to your .env file (see above)</p>

@@ -84,18 +84,18 @@ export default function ConversationsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="font-bold text-gray-900 text-3xl">Conversations</h1>
-          <p className="mt-1 text-gray-600">View and analyze all conversation transcripts</p>
+          <h1 className="font-bold text-gray-900 text-2xl sm:text-3xl">Conversations</h1>
+          <p className="mt-1 text-gray-600 text-sm sm:text-base">View and analyze all conversation transcripts</p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white shadow p-6 rounded-lg">
-        <div className="flex md:flex-row flex-col gap-4">
+      <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
+        <div className="flex sm:flex-row flex-col gap-3 sm:gap-4">
           <div className="flex-1">
             <div className="relative">
               <Search className="top-1/2 left-3 absolute w-4 h-4 text-gray-400 -translate-y-1/2 transform" />
@@ -104,7 +104,7 @@ export default function ConversationsPage() {
                 placeholder="Search by rep name or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="py-2 pr-4 pl-10 border border-gray-300 focus:border-transparent rounded-lg focus:ring-2 focus:ring-blue-500 w-full"
+                className="py-2 pr-4 pl-10 border border-gray-300 focus:border-transparent rounded-lg focus:ring-2 focus:ring-blue-500 w-full text-sm sm:text-base"
               />
             </div>
           </div>
@@ -113,7 +113,7 @@ export default function ConversationsPage() {
             <select
               value={selectedGrade}
               onChange={(e) => setSelectedGrade(e.target.value)}
-              className="px-3 py-2 border border-gray-300 focus:border-transparent rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border border-gray-300 focus:border-transparent rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
             >
               <option value="all">All Grades</option>
               <option value="A">Grade A</option>
@@ -128,25 +128,25 @@ export default function ConversationsPage() {
 
       {/* Loading State */}
       {isLoading && (
-        <div className="bg-white shadow p-8 rounded-lg">
+        <div className="bg-white shadow p-6 sm:p-8 rounded-lg">
           <div className="flex justify-center items-center">
-            <Loader2 className="mr-3 w-8 h-8 text-blue-600 animate-spin" />
-            <span className="text-gray-600">Loading conversations...</span>
+            <Loader2 className="mr-3 w-6 sm:w-8 h-6 sm:h-8 text-blue-600 animate-spin" />
+            <span className="text-gray-600 text-sm sm:text-base">Loading conversations...</span>
           </div>
         </div>
       )}
 
       {/* Error State */}
       {error && (
-        <div className="bg-red-50 p-4 border border-red-200 rounded-lg">
+        <div className="bg-red-50 p-3 sm:p-4 border border-red-200 rounded-lg">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <div className="flex justify-center items-center bg-red-400 rounded-full w-5 h-5">
+              <div className="flex justify-center items-center bg-red-400 rounded-full w-4 sm:w-5 h-4 sm:h-5">
                 <span className="text-white text-xs">!</span>
               </div>
             </div>
             <div className="ml-3">
-              <p className="text-red-800 text-sm">{error}</p>
+              <p className="text-red-800 text-sm sm:text-base">{error}</p>
             </div>
           </div>
         </div>
@@ -156,75 +156,76 @@ export default function ConversationsPage() {
       {!isLoading && !error && (
         <>
           {conversations.length === 0 ? (
-            <div className="bg-white shadow p-8 rounded-lg">
+            <div className="bg-white shadow p-6 sm:p-8 rounded-lg">
               <div className="text-center">
-                <div className="flex justify-center items-center bg-gray-100 mx-auto mb-4 rounded-full w-16 h-16">
-                  <Eye className="w-8 h-8 text-gray-400" />
+                <div className="flex justify-center items-center bg-gray-100 mx-auto mb-4 rounded-full w-12 sm:w-16 h-12 sm:h-16">
+                  <Eye className="w-6 sm:w-8 h-6 sm:h-8 text-gray-400" />
                 </div>
-                <h3 className="mb-2 font-medium text-gray-900 text-lg">No conversations yet</h3>
-                <p className="text-gray-600">Conversations will appear here once sales reps start making calls.</p>
+                <h3 className="mb-2 font-medium text-gray-900 text-base sm:text-lg">No conversations yet</h3>
+                <p className="text-gray-600 text-sm sm:text-base">Conversations will appear here once sales reps start making calls.</p>
               </div>
             </div>
           ) : (
             <div className="bg-white shadow rounded-lg overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="divide-y divide-gray-200 min-w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
-                  Rep
-                </th>
-                <th className="px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
-                  Duration
-                </th>
-                <th className="px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
-                  Grade
-                </th>
-                <th className="px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
-                  Date
-                </th>
-                <th className="px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredConversations.map((conversation) => (
-                <tr key={conversation.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="font-medium text-gray-900 text-sm">
-                        {conversation.user.firstName} {conversation.user.lastName}
-                      </div>
-                      <div className="text-gray-500 text-sm">{conversation.user.email}</div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-gray-900 text-sm whitespace-nowrap">
-                    {formatDuration(conversation.duration)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getGradeColor(conversation.grade)}`}>
-                      {conversation.grade}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-gray-900 text-sm whitespace-nowrap">
-                    {new Date(conversation.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 font-medium text-sm whitespace-nowrap">
-                    <button
-                      onClick={() => setSelectedConversation(conversation)}
-                      className="inline-flex items-center bg-blue-100 hover:bg-blue-200 px-3 py-1 border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-medium text-blue-700 text-sm leading-4"
-                    >
-                      <Eye className="mr-1 w-4 h-4" />
-                      View Transcript
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 sm:px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
+                        Rep
+                      </th>
+                      <th className="px-3 sm:px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
+                        Duration
+                      </th>
+                      <th className="px-3 sm:px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
+                        Grade
+                      </th>
+                      <th className="px-3 sm:px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th className="px-3 sm:px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredConversations.map((conversation) => (
+                      <tr key={conversation.id} className="hover:bg-gray-50">
+                        <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="font-medium text-gray-900 text-xs sm:text-sm">
+                              {conversation.user.firstName} {conversation.user.lastName}
+                            </div>
+                            <div className="max-w-32 sm:max-w-none text-gray-500 text-xs sm:text-sm truncate">{conversation.user.email}</div>
+                          </div>
+                        </td>
+                        <td className="px-3 sm:px-6 py-4 text-gray-900 text-xs sm:text-sm whitespace-nowrap">
+                          {formatDuration(conversation.duration)}
+                        </td>
+                        <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getGradeColor(conversation.grade)}`}>
+                            {conversation.grade}
+                          </span>
+                        </td>
+                        <td className="px-3 sm:px-6 py-4 text-gray-900 text-xs sm:text-sm whitespace-nowrap">
+                          {new Date(conversation.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-3 sm:px-6 py-4 font-medium text-xs sm:text-sm whitespace-nowrap">
+                          <button
+                            onClick={() => setSelectedConversation(conversation)}
+                            className="inline-flex items-center bg-blue-100 hover:bg-blue-200 px-2 sm:px-3 py-1 border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-medium text-blue-700 text-xs sm:text-sm leading-4"
+                          >
+                            <Eye className="mr-1 w-3 sm:w-4 h-3 sm:h-4" />
+                            <span className="hidden sm:inline">View Transcript</span>
+                            <span className="sm:hidden">View</span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
         </>
       )}
@@ -234,21 +235,21 @@ export default function ConversationsPage() {
         <div className="z-50 fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
           <div className="bg-white shadow-2xl rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
             {/* Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 text-white">
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-4 sm:px-6 py-3 sm:py-4 text-white">
               <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="font-bold text-xl">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-lg sm:text-xl truncate">
                     Conversation Transcript
                   </h3>
-                  <p className="mt-1 text-blue-100 text-sm">
+                  <p className="mt-1 text-blue-100 text-xs sm:text-sm truncate">
                     {selectedConversation.user.firstName} {selectedConversation.user.lastName} • {selectedConversation.user.email}
                   </p>
                 </div>
                 <button
                   onClick={() => setSelectedConversation(null)}
-                  className="hover:bg-white hover:bg-opacity-20 p-2 rounded-full text-white hover:text-blue-100 transition-colors"
+                  className="flex-shrink-0 hover:bg-white hover:bg-opacity-20 ml-2 p-1 sm:p-2 rounded-full text-white hover:text-blue-100 transition-colors"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 sm:w-6 h-5 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
@@ -256,49 +257,49 @@ export default function ConversationsPage() {
             </div>
 
             {/* Content */}
-            <div className="p-6 max-h-[calc(90vh-120px)] overflow-y-auto">
+            <div className="p-4 sm:p-6 max-h-[calc(90vh-120px)] overflow-y-auto">
               {/* Stats Cards */}
-              <div className="gap-4 grid grid-cols-1 md:grid-cols-3 mb-6">
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 border border-green-200 rounded-xl">
+              <div className="gap-3 sm:gap-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-4 sm:mb-6">
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-3 sm:p-4 border border-green-200 rounded-xl">
                   <div className="flex items-center">
-                    <div className="bg-green-500 mr-3 p-2 rounded-lg">
-                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="bg-green-500 mr-2 sm:mr-3 p-1.5 sm:p-2 rounded-lg">
+                      <svg className="w-4 sm:w-5 h-4 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
                     <div>
-                      <p className="font-medium text-green-600 text-sm">Duration</p>
-                      <p className="font-bold text-green-900 text-lg">{formatDuration(selectedConversation.duration)}</p>
+                      <p className="font-medium text-green-600 text-xs sm:text-sm">Duration</p>
+                      <p className="font-bold text-green-900 text-base sm:text-lg">{formatDuration(selectedConversation.duration)}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 border border-blue-200 rounded-xl">
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 sm:p-4 border border-blue-200 rounded-xl">
                   <div className="flex items-center">
-                    <div className="bg-blue-500 mr-3 p-2 rounded-lg">
-                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="bg-blue-500 mr-2 sm:mr-3 p-1.5 sm:p-2 rounded-lg">
+                      <svg className="w-4 sm:w-5 h-4 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
                     <div>
-                      <p className="font-medium text-blue-600 text-sm">Grade</p>
-                      <p className={`text-lg font-bold ${getGradeColor(selectedConversation.grade).replace('bg-', 'text-').replace('-100', '-900')}`}>
+                      <p className="font-medium text-blue-600 text-xs sm:text-sm">Grade</p>
+                      <p className={`text-base sm:text-lg font-bold ${getGradeColor(selectedConversation.grade).replace('bg-', 'text-').replace('-100', '-900')}`}>
                         {selectedConversation.grade}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 border border-purple-200 rounded-xl">
+                <div className="sm:col-span-2 lg:col-span-1 bg-gradient-to-r from-purple-50 to-pink-50 p-3 sm:p-4 border border-purple-200 rounded-xl">
                   <div className="flex items-center">
-                    <div className="bg-purple-500 mr-3 p-2 rounded-lg">
-                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="bg-purple-500 mr-2 sm:mr-3 p-1.5 sm:p-2 rounded-lg">
+                      <svg className="w-4 sm:w-5 h-4 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                     </div>
                     <div>
-                      <p className="font-medium text-purple-600 text-sm">Date</p>
-                      <p className="font-bold text-purple-900 text-lg">
+                      <p className="font-medium text-purple-600 text-xs sm:text-sm">Date</p>
+                      <p className="font-bold text-purple-900 text-base sm:text-lg">
                         {new Date(selectedConversation.createdAt).toLocaleDateString()}
                       </p>
                     </div>
@@ -307,17 +308,17 @@ export default function ConversationsPage() {
               </div>
 
               {/* Summary Section */}
-              <div className="mb-6">
-                <div className="flex items-center mb-3">
-                  <div className="bg-gradient-to-r from-amber-500 to-orange-500 mr-3 p-2 rounded-lg">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="mb-4 sm:mb-6">
+                <div className="flex items-center mb-2 sm:mb-3">
+                  <div className="bg-gradient-to-r from-amber-500 to-orange-500 mr-2 sm:mr-3 p-1.5 sm:p-2 rounded-lg">
+                    <svg className="w-4 sm:w-5 h-4 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
-                  <h4 className="font-semibold text-gray-900 text-lg">AI Analysis Summary</h4>
+                  <h4 className="font-semibold text-gray-900 text-base sm:text-lg">AI Analysis Summary</h4>
                 </div>
-                <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 border border-amber-200 rounded-xl">
-                  <p className="text-gray-800 leading-relaxed">
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-3 sm:p-4 border border-amber-200 rounded-xl">
+                  <p className="text-gray-800 text-sm sm:text-base leading-relaxed">
                     {selectedConversation.summary}
                   </p>
                 </div>
@@ -325,28 +326,28 @@ export default function ConversationsPage() {
 
               {/* Transcript Section */}
               <div>
-                <div className="flex justify-between items-center mb-3">
+                <div className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-2 mb-2 sm:mb-3">
                   <div className="flex items-center">
-                    <div className="bg-gradient-to-r from-indigo-500 to-purple-500 mr-3 p-2 rounded-lg">
-                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="bg-gradient-to-r from-indigo-500 to-purple-500 mr-2 sm:mr-3 p-1.5 sm:p-2 rounded-lg">
+                      <svg className="w-4 sm:w-5 h-4 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                       </svg>
                     </div>
-                    <h4 className="font-semibold text-gray-900 text-lg">Full Conversation Transcript</h4>
+                    <h4 className="font-semibold text-gray-900 text-base sm:text-lg">Full Conversation Transcript</h4>
                   </div>
-                  <div className="text-gray-500 text-sm">
+                  <div className="text-gray-500 text-xs sm:text-sm">
                     {selectedConversation.transcript.split('\n').length} lines
                   </div>
                 </div>
                 
                 <div className="bg-gray-50 border border-gray-200 rounded-xl overflow-hidden">
                   {/* Transcript Header */}
-                  <div className="bg-gray-100 px-4 py-2 border-gray-200 border-b">
-                    <div className="flex justify-between items-center text-gray-600 text-sm">
-                      <div className="flex items-center space-x-4">
+                  <div className="bg-gray-100 px-3 sm:px-4 py-2 border-gray-200 border-b">
+                    <div className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-2 text-gray-600 text-xs sm:text-sm">
+                      <div className="flex items-center space-x-2 sm:space-x-4">
                         <span>Scroll to read the full conversation</span>
                         <div className="flex items-center space-x-2">
-                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-3 sm:w-4 h-3 sm:h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                           </svg>
                           <input
@@ -354,7 +355,7 @@ export default function ConversationsPage() {
                             placeholder="Search in transcript..."
                             value={transcriptSearch}
                             onChange={(e) => setTranscriptSearch(e.target.value)}
-                            className="px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 w-32 text-xs"
+                            className="px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 w-24 sm:w-32 text-xs"
                           />
                         </div>
                       </div>
@@ -365,16 +366,16 @@ export default function ConversationsPage() {
                   </div>
                   
                   {/* Transcript Content */}
-                  <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                    <div className="p-4">
-                      <div className="space-y-3">
+                  <div className="max-h-64 sm:max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                    <div className="p-3 sm:p-4">
+                      <div className="space-y-2 sm:space-y-3">
                         {selectedConversation.transcript.split('\n').map((line, index) => {
                           const isUser = line.toLowerCase().includes('user:') || line.toLowerCase().includes('rep:')
                           const isAssistant = line.toLowerCase().includes('assistant:') || line.toLowerCase().includes('customer:')
                           const hasSearchMatch = transcriptSearch && line.toLowerCase().includes(transcriptSearch.toLowerCase())
                           
                           return (
-                            <div key={index} className={`p-3 rounded-lg transition-all duration-200 ${
+                            <div key={index} className={`p-2 sm:p-3 rounded-lg transition-all duration-200 ${
                               hasSearchMatch 
                                 ? 'bg-yellow-50 border-l-4 border-yellow-400 shadow-sm' 
                                 : isUser 
@@ -383,7 +384,7 @@ export default function ConversationsPage() {
                                 ? 'bg-gray-50 border-l-4 border-gray-400' 
                                 : 'bg-white'
                             }`}>
-                              <div className={`text-sm leading-relaxed ${
+                              <div className={`text-xs sm:text-sm leading-relaxed ${
                                 isUser 
                                   ? 'text-blue-900 font-medium' 
                                   : isAssistant 
@@ -406,7 +407,7 @@ export default function ConversationsPage() {
                   </div>
                   
                   {/* Transcript Footer */}
-                  <div className="bg-gray-100 px-4 py-2 border-gray-200 border-t">
+                  <div className="bg-gray-100 px-3 sm:px-4 py-2 border-gray-200 border-t">
                     <div className="flex justify-between items-center text-gray-500 text-xs">
                       <span>End of conversation</span>
                       <span>Duration: {formatDuration(selectedConversation.duration)}</span>

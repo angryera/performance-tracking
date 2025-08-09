@@ -97,19 +97,19 @@ export default function PerformancePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="font-bold text-gray-900 text-3xl">Performance Analytics</h1>
-          <p className="mt-1 text-gray-600">Track and analyze your team's performance metrics</p>
+          <h1 className="font-bold text-gray-900 text-2xl sm:text-3xl">Performance Analytics</h1>
+          <p className="mt-1 text-gray-600 text-sm sm:text-base">Track and analyze your team's performance metrics</p>
         </div>
         <div className="flex items-center space-x-2">
-          <label className="font-medium text-gray-700 text-sm">Period:</label>
+          <label className="font-medium text-gray-700 text-xs sm:text-sm">Period:</label>
           <select
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
-            className="px-3 py-2 border border-gray-300 focus:border-transparent rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 focus:border-transparent rounded-lg focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
           >
             <option value="week">This Week</option>
             <option value="month">This Month</option>
@@ -121,25 +121,25 @@ export default function PerformancePage() {
 
       {/* Loading State */}
       {isLoading && (
-        <div className="flex justify-center items-center py-12">
+        <div className="flex justify-center items-center py-8 sm:py-12">
           <div className="flex items-center space-x-2">
-            <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
-            <span className="text-gray-600">Loading performance data...</span>
+            <Loader2 className="w-5 sm:w-6 h-5 sm:h-6 text-blue-600 animate-spin" />
+            <span className="text-gray-600 text-sm sm:text-base">Loading performance data...</span>
           </div>
         </div>
       )}
 
       {/* Error State */}
       {error && (
-        <div className="bg-red-50 p-4 border border-red-200 rounded-lg">
+        <div className="bg-red-50 p-3 sm:p-4 border border-red-200 rounded-lg">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <div className="flex justify-center items-center bg-red-400 rounded-full w-5 h-5">
+              <div className="flex justify-center items-center bg-red-400 rounded-full w-4 sm:w-5 h-4 sm:h-5">
                 <span className="text-white text-xs">!</span>
               </div>
             </div>
             <div className="ml-3">
-              <p className="text-red-800 text-sm">{error}</p>
+              <p className="text-red-800 text-sm sm:text-base">{error}</p>
             </div>
           </div>
         </div>
@@ -147,51 +147,51 @@ export default function PerformancePage() {
 
       {/* Summary Cards */}
       {!isLoading && !error && (
-        <div className="gap-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-          <div className="bg-white shadow p-6 rounded-lg">
+        <div className="gap-4 sm:gap-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
             <div className="flex items-center">
               <div className="bg-blue-100 p-2 rounded-lg">
-                <Users className="w-6 h-6 text-blue-600" />
+                <Users className="w-5 sm:w-6 h-5 sm:h-6 text-blue-600" />
               </div>
-              <div className="ml-4">
-                <p className="font-medium text-gray-600 text-sm">Active Reps</p>
-                <p className="font-semibold text-gray-900 text-2xl">{summary.totalReps}</p>
+              <div className="ml-3 sm:ml-4">
+                <p className="font-medium text-gray-600 text-xs sm:text-sm">Active Reps</p>
+                <p className="font-semibold text-gray-900 text-xl sm:text-2xl">{summary.totalReps}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white shadow p-6 rounded-lg">
+          <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
             <div className="flex items-center">
               <div className="bg-green-100 p-2 rounded-lg">
-                <TrendingUp className="w-6 h-6 text-green-600" />
+                <TrendingUp className="w-5 sm:w-6 h-5 sm:h-6 text-green-600" />
               </div>
-              <div className="ml-4">
-                <p className="font-medium text-gray-600 text-sm">Total Calls</p>
-                <p className="font-semibold text-gray-900 text-2xl">{summary.totalCalls}</p>
+              <div className="ml-3 sm:ml-4">
+                <p className="font-medium text-gray-600 text-xs sm:text-sm">Total Calls</p>
+                <p className="font-semibold text-gray-900 text-xl sm:text-2xl">{summary.totalCalls}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white shadow p-6 rounded-lg">
+          <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
             <div className="flex items-center">
               <div className="bg-purple-100 p-2 rounded-lg">
-                <Award className="w-6 h-6 text-purple-600" />
+                <Award className="w-5 sm:w-6 h-5 sm:h-6 text-purple-600" />
               </div>
-              <div className="ml-4">
-                <p className="font-medium text-gray-600 text-sm">Avg Grade</p>
-                <p className="font-semibold text-gray-900 text-2xl">{summary.overallAvgGrade}</p>
+              <div className="ml-3 sm:ml-4">
+                <p className="font-medium text-gray-600 text-xs sm:text-sm">Avg Grade</p>
+                <p className="font-semibold text-gray-900 text-xl sm:text-2xl">{summary.overallAvgGrade}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white shadow p-6 rounded-lg">
+          <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
             <div className="flex items-center">
               <div className="bg-orange-100 p-2 rounded-lg">
-                <Clock className="w-6 h-6 text-orange-600" />
+                <Clock className="w-5 sm:w-6 h-5 sm:h-6 text-orange-600" />
               </div>
-              <div className="ml-4">
-                <p className="font-medium text-gray-600 text-sm">Total Duration</p>
-                <p className="font-semibold text-gray-900 text-2xl">{summary.totalMinutes} minutes</p>
+              <div className="ml-3 sm:ml-4">
+                <p className="font-medium text-gray-600 text-xs sm:text-sm">Total Duration</p>
+                <p className="font-semibold text-gray-900 text-xl sm:text-2xl">{summary.totalMinutes} minutes</p>
               </div>
             </div>
           </div>
@@ -201,35 +201,35 @@ export default function PerformancePage() {
       {/* Performance Table */}
       {!isLoading && !error && (
         <div className="bg-white shadow rounded-lg overflow-hidden">
-          <div className="px-6 py-4 border-gray-200 border-b">
-            <h3 className="font-semibold text-gray-900 text-lg">Individual Performance</h3>
+          <div className="px-4 sm:px-6 py-3 sm:py-4 border-gray-200 border-b">
+            <h3 className="font-semibold text-gray-900 text-base sm:text-lg">Individual Performance</h3>
           </div>
           <div className="overflow-x-auto">
             {performanceData.length === 0 ? (
-              <div className="py-12 text-center">
-                <div className="flex justify-center items-center bg-gray-100 mx-auto mb-4 rounded-full w-16 h-16">
-                  <Users className="w-8 h-8 text-gray-400" />
+              <div className="py-8 sm:py-12 text-center">
+                <div className="flex justify-center items-center bg-gray-100 mx-auto mb-4 rounded-full w-12 sm:w-16 h-12 sm:h-16">
+                  <Users className="w-6 sm:w-8 h-6 sm:h-8 text-gray-400" />
                 </div>
-                <h3 className="mb-2 font-medium text-gray-900 text-lg">No performance data</h3>
-                <p className="text-gray-600">Performance data will appear here once sales reps start making calls.</p>
+                <h3 className="mb-2 font-medium text-gray-900 text-base sm:text-lg">No performance data</h3>
+                <p className="text-gray-600 text-sm sm:text-base">Performance data will appear here once sales reps start making calls.</p>
               </div>
             ) : (
               <table className="divide-y divide-gray-200 min-w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
                       Rep
                     </th>
-                    <th className="px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
                       Total Calls
                     </th>
-                    <th className="px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
                       Avg Grade
                     </th>
-                    <th className="px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
                       Total Duration
                     </th>
-                    <th className="px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
                       Last Activity
                     </th>
                   </tr>
@@ -237,26 +237,26 @@ export default function PerformancePage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {performanceData.map((performance) => (
                     <tr key={performance.userId} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                         <div>
-                          <div className="font-medium text-gray-900 text-sm">
+                          <div className="font-medium text-gray-900 text-xs sm:text-sm">
                             {performance.user.firstName} {performance.user.lastName}
                           </div>
-                          <div className="text-gray-500 text-sm">{performance.user.email}</div>
+                          <div className="max-w-32 sm:max-w-none text-gray-500 text-xs sm:text-sm truncate">{performance.user.email}</div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-gray-900 text-sm whitespace-nowrap">
+                      <td className="px-3 sm:px-6 py-4 text-gray-900 text-xs sm:text-sm whitespace-nowrap">
                         {performance.totalCalls}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getGradeColor(performance.avgGrade)}`}>
                           {performance.avgGrade}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-gray-900 text-sm whitespace-nowrap">
+                      <td className="px-3 sm:px-6 py-4 text-gray-900 text-xs sm:text-sm whitespace-nowrap">
                         {formatDuration(performance.totalDuration)}
                       </td>
-                      <td className="px-6 py-4 text-gray-500 text-sm whitespace-nowrap">
+                      <td className="px-3 sm:px-6 py-4 text-gray-500 text-xs sm:text-sm whitespace-nowrap">
                         {performance.lastActivity ? 
                           new Date(performance.lastActivity).toLocaleDateString() : 
                           'No activity'
@@ -273,52 +273,52 @@ export default function PerformancePage() {
 
       {/* Charts Section */}
       {!isLoading && !error && (
-        <div className="gap-6 grid grid-cols-1 lg:grid-cols-2">
+        <div className="gap-4 sm:gap-6 grid grid-cols-1 lg:grid-cols-2">
           {/* Grade Distribution */}
-          <div className="bg-white shadow p-6 rounded-lg">
-            <h3 className="mb-4 font-semibold text-gray-900 text-lg">Grade Distribution</h3>
-            <div className="space-y-3">
+          <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
+            <h3 className="mb-3 sm:mb-4 font-semibold text-gray-900 text-base sm:text-lg">Grade Distribution</h3>
+            <div className="space-y-2 sm:space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-gray-600 text-sm">Grade A</span>
+                <span className="text-gray-600 text-xs sm:text-sm">Grade A</span>
                 <div className="flex items-center">
-                  <div className="bg-gray-200 mr-2 rounded-full w-32 h-2">
-                    <div className="bg-green-600 rounded-full h-2" style={{ width: `${gradeDistribution.A}%` }}></div>
+                  <div className="bg-gray-200 mr-2 rounded-full w-24 sm:w-32 h-1.5 sm:h-2">
+                    <div className="bg-green-600 rounded-full h-1.5 sm:h-2" style={{ width: `${gradeDistribution.A}%` }}></div>
                   </div>
                   <span className="text-gray-500 text-xs">{gradeDistribution.A}%</span>
                 </div>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600 text-sm">Grade B</span>
+                <span className="text-gray-600 text-xs sm:text-sm">Grade B</span>
                 <div className="flex items-center">
-                  <div className="bg-gray-200 mr-2 rounded-full w-32 h-2">
-                    <div className="bg-blue-600 rounded-full h-2" style={{ width: `${gradeDistribution.B}%` }}></div>
+                  <div className="bg-gray-200 mr-2 rounded-full w-24 sm:w-32 h-1.5 sm:h-2">
+                    <div className="bg-blue-600 rounded-full h-1.5 sm:h-2" style={{ width: `${gradeDistribution.B}%` }}></div>
                   </div>
                   <span className="text-gray-500 text-xs">{gradeDistribution.B}%</span>
                 </div>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600 text-sm">Grade C</span>
+                <span className="text-gray-600 text-xs sm:text-sm">Grade C</span>
                 <div className="flex items-center">
-                  <div className="bg-gray-200 mr-2 rounded-full w-32 h-2">
-                    <div className="bg-yellow-600 rounded-full h-2" style={{ width: `${gradeDistribution.C}%` }}></div>
+                  <div className="bg-gray-200 mr-2 rounded-full w-24 sm:w-32 h-1.5 sm:h-2">
+                    <div className="bg-yellow-600 rounded-full h-1.5 sm:h-2" style={{ width: `${gradeDistribution.C}%` }}></div>
                   </div>
                   <span className="text-gray-500 text-xs">{gradeDistribution.C}%</span>
                 </div>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600 text-sm">Grade D</span>
+                <span className="text-gray-600 text-xs sm:text-sm">Grade D</span>
                 <div className="flex items-center">
-                  <div className="bg-gray-200 mr-2 rounded-full w-32 h-2">
-                    <div className="bg-orange-600 rounded-full h-2" style={{ width: `${gradeDistribution.D}%` }}></div>
+                  <div className="bg-gray-200 mr-2 rounded-full w-24 sm:w-32 h-1.5 sm:h-2">
+                    <div className="bg-orange-600 rounded-full h-1.5 sm:h-2" style={{ width: `${gradeDistribution.D}%` }}></div>
                   </div>
                   <span className="text-gray-500 text-xs">{gradeDistribution.D}%</span>
                 </div>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600 text-sm">Grade F</span>
+                <span className="text-gray-600 text-xs sm:text-sm">Grade F</span>
                 <div className="flex items-center">
-                  <div className="bg-gray-200 mr-2 rounded-full w-32 h-2">
-                    <div className="bg-red-600 rounded-full h-2" style={{ width: `${gradeDistribution.F}%` }}></div>
+                  <div className="bg-gray-200 mr-2 rounded-full w-24 sm:w-32 h-1.5 sm:h-2">
+                    <div className="bg-red-600 rounded-full h-1.5 sm:h-2" style={{ width: `${gradeDistribution.F}%` }}></div>
                   </div>
                   <span className="text-gray-500 text-xs">{gradeDistribution.F}%</span>
                 </div>
@@ -327,19 +327,19 @@ export default function PerformancePage() {
           </div>
 
           {/* Call Volume Trend */}
-          <div className="bg-white shadow p-6 rounded-lg">
-            <h3 className="mb-4 font-semibold text-gray-900 text-lg">Call Volume Trend (Last 7 Days)</h3>
-            <div className="space-y-3">
+          <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
+            <h3 className="mb-3 sm:mb-4 font-semibold text-gray-900 text-base sm:text-lg">Call Volume Trend (Last 7 Days)</h3>
+            <div className="space-y-2 sm:space-y-3">
               {callTrend.map((day) => {
                 const maxCalls = Math.max(...callTrend.map(d => d.calls))
                 const percentage = maxCalls > 0 ? (day.calls / maxCalls) * 100 : 0
                 
                 return (
                   <div key={day.day} className="flex justify-between items-center">
-                    <span className="text-gray-600 text-sm">{day.day}</span>
+                    <span className="text-gray-600 text-xs sm:text-sm">{day.day}</span>
                     <div className="flex items-center">
-                      <div className="bg-gray-200 mr-2 rounded-full w-32 h-2">
-                        <div className="bg-blue-600 rounded-full h-2" style={{ width: `${percentage}%` }}></div>
+                      <div className="bg-gray-200 mr-2 rounded-full w-24 sm:w-32 h-1.5 sm:h-2">
+                        <div className="bg-blue-600 rounded-full h-1.5 sm:h-2" style={{ width: `${percentage}%` }}></div>
                       </div>
                       <span className="text-gray-500 text-xs">{day.calls}</span>
                     </div>
