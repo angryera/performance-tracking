@@ -69,15 +69,40 @@ export default function RepPortal() {
         setCurrentUser(user)
         setIsLoggedIn(true)
         fetchUserUsage(user.id)
-        if (user.role === 'ADMIN') {
-          fetchConversations()
-        }
+        // Fetch conversations for all users (both admin and regular reps)
+        fetchConversations()
       } catch (error) {
         console.error('Error parsing saved user:', error)
         localStorage.removeItem('user')
       }
     }
   }, [])
+
+  // Debug userUsage changes
+  useEffect(() => {
+    console.log('🔍 userUsage changed:', userUsage)
+    console.log('🔍 VAPIWidget remainingSeconds:', userUsage?.remainingSeconds || 0)
+  }, [userUsage])
+
+  // Auto-fetch conversations when switching to My Data tab
+  useEffect(() => {
+    if (activeTab === 'management' && currentUser && conversations.length === 0) {
+      fetchConversations()
+    }
+  }, [activeTab, currentUser, conversations.length])
+
+  // Periodic refresh of conversations every 2 minutes
+  useEffect(() => {
+    if (!currentUser) return
+
+    const interval = setInterval(() => {
+      if (activeTab === 'management') {
+        fetchConversations()
+      }
+    }, 2 * 60 * 1000) // 2 minutes
+
+    return () => clearInterval(interval)
+  }, [currentUser, activeTab])
 
   const formatDuration = (seconds: number) => {
     const minutes = Math.floor(seconds / 60)
@@ -151,10 +176,8 @@ export default function RepPortal() {
         window.dispatchEvent(new CustomEvent('managerAuthChange'))
         // Fetch user usage data
         fetchUserUsage(data.user.id)
-        // If admin, fetch conversations
-        if (data.user.role === 'ADMIN') {
-          fetchConversations()
-        }
+        // Fetch conversations for all users (both admin and regular reps)
+        fetchConversations()
       } else {
         setError(data.error || 'Login failed')
       }
@@ -183,10 +206,8 @@ export default function RepPortal() {
       })
 
       if (response.ok) {
-        // Refresh conversations if user is admin
-        if (currentUser.role === 'ADMIN') {
-          fetchConversations()
-        }
+        // Refresh conversations for all users (both admin and regular reps)
+        fetchConversations()
         // Refresh user usage
         fetchUserUsage(currentUser.id)
       }
@@ -292,28 +313,6 @@ export default function RepPortal() {
               </div>
             </div>
 
-            {/* Desktop Navigation */}
-            <nav className="hidden md:flex space-x-6 lg:space-x-8">
-              <button
-                onClick={() => setActiveTab('dashboard')}
-                className={`hover:bg-gray-100 px-3 py-2 rounded-md font-medium text-sm transition-colors ${activeTab === 'dashboard'
-                  ? 'text-green-600 bg-green-50'
-                  : 'text-gray-600 hover:text-gray-900'
-                  }`}
-              >
-                Dashboard
-              </button>
-              <button
-                onClick={() => setActiveTab('management')}
-                className={`hover:bg-gray-100 px-3 py-2 rounded-md font-medium text-sm transition-colors ${activeTab === 'management'
-                  ? 'text-green-600 bg-green-50'
-                  : 'text-gray-600 hover:text-gray-900'
-                  }`}
-              >
-                My Data
-              </button>
-            </nav>
-
             <div className="flex items-center space-x-2 sm:space-x-4">
               {/* Desktop Manager Portal Button (for admins) */}
               {currentUser?.role === 'ADMIN' && (
@@ -328,20 +327,10 @@ export default function RepPortal() {
               {/* Desktop Logout Button */}
               <button
                 onClick={handleLogout}
-                className="hidden sm:flex items-center hover:bg-gray-100 px-3 py-2 rounded-md text-gray-600 hover:text-gray-900 transition-colors"
+                className="flex items-center hover:bg-gray-100 px-3 py-2 rounded-md text-gray-600 hover:text-gray-900 transition-colors"
               >
                 <LogOut className="mr-2 w-4 h-4" />
                 <span className="font-medium text-sm">Sign Out</span>
-              </button>
-
-              {/* Mobile Menu Button */}
-              <button
-                onClick={() => setActiveTab(activeTab === 'dashboard' ? 'management' : 'dashboard')}
-                className="md:hidden hover:bg-gray-100 p-2 rounded-md text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
               </button>
             </div>
           </div>
@@ -351,7 +340,7 @@ export default function RepPortal() {
       {/* Welcome Message */}
       <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-100 border-b">
         <div className="mx-auto px-4 sm:px-6 lg:px-8 py-3 max-w-7xl">
-          <div className="flex justify-between items-center">
+          <div className="flex sm:flex-row flex-col justify-between items-center">
             <div className="flex items-center space-x-3">
               <p className={`${poppins.className} text-sm text-gray-700`}>
                 Welcome back, <span className="font-semibold">{currentUser?.firstName} {currentUser?.lastName}</span>
@@ -533,18 +522,34 @@ export default function RepPortal() {
 
                           {conversation.mergedTranscript ? (
                             <div className="space-y-2">
-                              {JSON.parse(conversation.mergedTranscript).map((message: any, index: number) => (
-                                <div key={index} className={`p-2 rounded ${message.role === 'user' ? 'bg-blue-50 border-l-4 border-blue-400' : 'bg-gray-50 border-l-4 border-gray-400'
-                                  }`}>
-                                  <div className="flex items-center space-x-2 mb-1">
-                                    <span className={`text-xs font-medium px-2 py-1 rounded ${message.role === 'user' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                              {(() => {
+                                let messages: any[] = [];
+                                try {
+                                  messages = JSON.parse(conversation.mergedTranscript);
+                                  if (!Array.isArray(messages)) messages = [];
+                                } catch (e) {
+                                  // If JSON is invalid or empty, fallback to empty array
+                                  messages = [];
+                                }
+                                return messages.length > 0 ? (
+                                  messages.map((message: any, index: number) => (
+                                    <div key={index} className={`p-2 rounded ${message.role === 'user' ? 'bg-blue-50 border-l-4 border-blue-400' : 'bg-gray-50 border-l-4 border-gray-400'
                                       }`}>
-                                      {message.role === 'user' ? 'Me' : 'AI'}
-                                    </span>
-                                  </div>
-                                  <p className="text-gray-700 text-sm">{message.text}</p>
-                                </div>
-                              ))}
+                                      <div className="flex items-center space-x-2 mb-1">
+                                        <span className={`text-xs font-medium px-2 py-1 rounded ${message.role === 'user' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                                          }`}>
+                                          {message.role === 'user' ? 'Me' : 'AI'}
+                                        </span>
+                                      </div>
+                                      <p className="text-gray-700 text-sm">{message.text}</p>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <p className="text-gray-600 text-sm line-clamp-3">
+                                    {conversation.transcript || 'No transcript available'}
+                                  </p>
+                                );
+                              })()}
                             </div>
                           ) : (
                             <p className="text-gray-600 text-sm line-clamp-3">
