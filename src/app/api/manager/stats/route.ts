@@ -26,24 +26,7 @@ export async function GET() {
 
     // Calculate total minutes (convert seconds to minutes)
     const totalMinutesUsed = Math.round((totalMinutesFromConversations._sum.duration || 0) / 60)
-
-    // Get sample conversations for debugging
-    const sampleConversations = await prisma.conversation.findMany({
-      take: 3,
-      select: {
-        id: true,
-        duration: true,
-        createdAt: true,
-        user: {
-          select: {
-            firstName: true,
-            lastName: true
-          }
-        }
-      }
-    })
-    console.log('- Sample conversations:', sampleConversations)
-
+    
     // Calculate average grade from conversations
     const conversations = await prisma.conversation.findMany({
       where: {
