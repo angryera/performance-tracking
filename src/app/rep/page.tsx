@@ -6,12 +6,12 @@ import VAPIWidget from '@/components/VAPIWidget'
 import { Inter, Poppins, Quicksand } from 'next/font/google'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
-const poppins = Poppins({ 
+const poppins = Poppins({
   weight: ['300', '400', '500', '600', '700'],
   subsets: ['latin'],
   variable: '--font-poppins'
 })
-const quicksand = Quicksand({ 
+const quicksand = Quicksand({
   weight: ['300', '400', '500', '600', '700'],
   subsets: ['latin'],
   variable: '--font-quicksand'
@@ -26,6 +26,14 @@ interface User {
   minutes: number
 }
 
+interface UserUsage {
+  totalSecondsUsed: number
+  grantedMinutes: number
+  remainingSeconds: number
+  totalMinutesUsed: number
+  remainingMinutes: number
+}
+
 export default function RepPortal() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
@@ -35,6 +43,10 @@ export default function RepPortal() {
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string>('')
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [userUsage, setUserUsage] = useState<UserUsage | null>(null)
 
   // Check for existing session on component mount
   useEffect(() => {
@@ -44,6 +56,8 @@ export default function RepPortal() {
         const user = JSON.parse(savedUser)
         setCurrentUser(user)
         setIsLoggedIn(true)
+        // Fetch user usage data
+        fetchUserUsage(user.id)
       } catch (error) {
         console.error('Error parsing saved user:', error)
         localStorage.removeItem('currentUser')
@@ -51,9 +65,28 @@ export default function RepPortal() {
     }
   }, [])
 
+  const formatDuration = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = seconds % 60
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
+  }
+
+  const fetchUserUsage = async (userId: string) => {
+    try {
+      const response = await fetch(`/api/user/usage?userId=${userId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setUserUsage(data)
+      }
+    } catch (error) {
+      console.error('Error fetching user usage:', error)
+    }
+  }
+
   const handleLogout = () => {
     setCurrentUser(null)
     setIsLoggedIn(false)
+    setUserUsage(null)
     localStorage.removeItem('currentUser')
   }
 
@@ -78,6 +111,8 @@ export default function RepPortal() {
         setIsLoggedIn(true)
         // Save user to localStorage for session persistence
         localStorage.setItem('currentUser', JSON.stringify(data.user))
+        // Fetch user usage data
+        fetchUserUsage(data.user.id)
       } else {
         setError(data.error || 'Login failed')
       }
@@ -115,7 +150,7 @@ export default function RepPortal() {
           )}
 
           <form className="space-y-6 mt-8" onSubmit={handleLogin}>
-                        <div className="space-y-6">
+            <div className="space-y-6">
               <div>
                 <label htmlFor="email" className={`${poppins.className} block font-medium text-gray-700 text-sm mb-2`}>
                   Email Address
@@ -135,7 +170,7 @@ export default function RepPortal() {
                   />
                 </div>
               </div>
-              
+
               <div>
                 <label htmlFor="password" className={`${poppins.className} block font-medium text-gray-700 text-sm mb-2`}>
                   Password
@@ -229,13 +264,14 @@ export default function RepPortal() {
               onTranscriptUpdate={(transcript) => {
                 console.log('Transcript updated:', transcript)
               }}
-                            onCallEnd={async (duration, transcript) => {
+              onCallEnd={async (duration, transcript) => {
                 console.log('Call ended:', { duration, transcript })
-                
+
                 // Analyze transcript with AI first
                 let grade = null
                 let summary = null
-                
+
+                setIsAnalyzing(true)
                 try {
                   const analysisResponse = await fetch('/api/analyze-transcript', {
                     method: 'POST',
@@ -244,7 +280,7 @@ export default function RepPortal() {
                     },
                     body: JSON.stringify({ transcript }),
                   })
-                  
+
                   if (analysisResponse.ok) {
                     const analysis = await analysisResponse.json()
                     grade = analysis.grade
@@ -255,9 +291,12 @@ export default function RepPortal() {
                   }
                 } catch (error) {
                   console.error('Error analyzing transcript:', error)
+                } finally {
+                  setIsAnalyzing(false)
                 }
-                
+
                 // Save conversation to database with AI analysis and accurate duration
+                setIsSaving(true)
                 try {
                   const response = await fetch('/api/conversations', {
                     method: 'POST',
@@ -272,7 +311,7 @@ export default function RepPortal() {
                       summary
                     }),
                   })
-                  
+
                   if (response.ok) {
                     console.log('Conversation saved successfully with AI analysis and accurate duration:', duration)
                   } else {
@@ -280,6 +319,14 @@ export default function RepPortal() {
                   }
                 } catch (error) {
                   console.error('Error saving conversation:', error)
+                } finally {
+                  setIsSaving(false)
+                  setShowSuccess(true)
+                  setTimeout(() => setShowSuccess(false), 3000) // Hide after 3 seconds
+                  // Refresh user usage data
+                  if (currentUser?.id) {
+                    fetchUserUsage(currentUser.id)
+                  }
                 }
               }}
             />
@@ -289,17 +336,27 @@ export default function RepPortal() {
               <div className="bg-white shadow-lg p-6 border border-gray-100 rounded-xl">
                 <div className="text-center">
                   <div className={`${quicksand.className} font-bold text-gray-900 text-3xl mb-2`}>
-                    {currentUser ? currentUser.minutes : 0}
+                    {userUsage ? formatDuration(userUsage.totalSecondsUsed) : '0:00'}
                   </div>
-                  <div className={`${poppins.className} text-gray-600 text-sm font-medium`}>Minutes Used</div>
+                  <div className={`${poppins.className} text-gray-600 text-sm font-medium`}>Time Used</div>
+                  {userUsage && (
+                    <div className={`${poppins.className} text-gray-500 text-xs mt-1`}>
+                      of {userUsage.grantedMinutes} min granted
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="bg-white shadow-lg p-6 border border-gray-100 rounded-xl">
                 <div className="text-center">
                   <div className={`${quicksand.className} font-bold text-green-600 text-2xl mb-2`}>
-                    {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'N/A'}
+                    {userUsage ? formatDuration(userUsage.remainingSeconds) : '0:00'}
                   </div>
-                  <div className={`${poppins.className} text-gray-600 text-sm font-medium`}>Your Name</div>
+                  <div className={`${poppins.className} text-gray-600 text-sm font-medium`}>Time Remaining</div>
+                  {userUsage && userUsage.remainingMinutes <= 10 && (
+                    <div className={`${poppins.className} text-orange-500 text-xs mt-1 font-medium`}>
+                      Low balance
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="bg-white shadow-lg p-6 border border-gray-100 rounded-xl">
@@ -314,6 +371,97 @@ export default function RepPortal() {
           </div>
         </div>
       </main>
+
+      {/* Analyzing Overlay */}
+      {isAnalyzing && (
+        <div className="z-50 fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 backdrop-blur-sm">
+          <div className="bg-white shadow-2xl p-8 border border-gray-200 rounded-2xl max-w-md text-center">
+            <div className="mx-auto mb-6 border-purple-400 border-b-2 rounded-full w-16 h-16 animate-spin"></div>
+            <h3 className={`${quicksand.className} font-bold text-purple-600 text-2xl mb-3`}>
+              Analyzing Performance
+            </h3>
+            <p className={`${poppins.className} text-gray-600 text-lg mb-6`}>
+              AI is evaluating your conversation and generating insights...
+            </p>
+            <div className="space-y-3 text-left">
+              <div className="flex items-center text-gray-500 text-sm">
+                <div className="bg-purple-400 mr-3 rounded-full w-2 h-2"></div>
+                Processing conversation transcript
+              </div>
+              <div className="flex items-center text-gray-500 text-sm">
+                <div className="bg-purple-400 mr-3 rounded-full w-2 h-2"></div>
+                Evaluating sales techniques
+              </div>
+              <div className="flex items-center text-gray-500 text-sm">
+                <div className="bg-purple-400 mr-3 rounded-full w-2 h-2"></div>
+                Generating performance grade
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Saving Overlay */}
+      {isSaving && (
+        <div className="z-50 fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 backdrop-blur-sm">
+          <div className="bg-white shadow-2xl p-8 border border-gray-200 rounded-2xl max-w-md text-center">
+            <div className="mx-auto mb-6 border-b-2 border-blue-400 rounded-full w-16 h-16 animate-spin"></div>
+            <h3 className={`${quicksand.className} font-bold text-blue-600 text-2xl mb-3`}>
+              Saving Conversation
+            </h3>
+            <p className={`${poppins.className} text-gray-600 text-lg mb-6`}>
+              Storing your session data and updating your usage...
+            </p>
+            <div className="space-y-3 text-left">
+              <div className="flex items-center text-gray-500 text-sm">
+                <div className="bg-blue-400 mr-3 rounded-full w-2 h-2"></div>
+                Saving conversation transcript
+              </div>
+              <div className="flex items-center text-gray-500 text-sm">
+                <div className="bg-blue-400 mr-3 rounded-full w-2 h-2"></div>
+                Storing performance analysis
+              </div>
+              <div className="flex items-center text-gray-500 text-sm">
+                <div className="bg-blue-400 mr-3 rounded-full w-2 h-2"></div>
+                Updating usage statistics
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Message Overlay */}
+      {showSuccess && (
+        <div className="z-50 fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 backdrop-blur-sm">
+          <div className="bg-white shadow-2xl p-8 border border-gray-200 rounded-2xl max-w-md text-center">
+            <div className="flex justify-center items-center bg-green-100 mx-auto mb-6 rounded-full w-16 h-16">
+              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className={`${quicksand.className} font-bold text-green-800 text-2xl mb-3`}>
+              Session Complete!
+            </h3>
+            <p className={`${poppins.className} text-green-700 text-lg`}>
+              Your conversation has been analyzed and saved successfully.
+            </p>
+            <div className="space-y-2 mt-6 text-left">
+              <div className="flex items-center text-gray-600 text-sm">
+                <div className="bg-green-400 mr-3 rounded-full w-2 h-2"></div>
+                Performance analysis completed
+              </div>
+              <div className="flex items-center text-gray-600 text-sm">
+                <div className="bg-green-400 mr-3 rounded-full w-2 h-2"></div>
+                Conversation saved to database
+              </div>
+              <div className="flex items-center text-gray-600 text-sm">
+                <div className="bg-green-400 mr-3 rounded-full w-2 h-2"></div>
+                Usage statistics updated
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 } 

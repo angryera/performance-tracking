@@ -27,8 +27,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { 
         message: 'Connection test successful',
-        rowCount: sheetData.length,
-        sampleData: sheetData.slice(0, 2) // Return first 2 rows as sample
+        rowCount: sheetData.users.length,
+        sampleData: sheetData.users.slice(0, 2) // Return first 2 rows as sample
       },
       { status: 200 }
     )
