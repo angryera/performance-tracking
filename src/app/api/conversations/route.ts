@@ -44,16 +44,13 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'User ID is required' },
-        { status: 400 }
-      )
-    }
+    // If userId is provided, get conversations for that specific user
+    // If no userId, get all conversations (for manager view)
+    const whereClause = userId ? { userId } : {}
 
-    // Get conversations for the user
+    // Get conversations
     const conversations = await prisma.conversation.findMany({
-      where: { userId },
+      where: whereClause,
       orderBy: { createdAt: 'desc' },
       include: {
         user: {

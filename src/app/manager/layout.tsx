@@ -9,13 +9,13 @@ export default function ManagerLayout({
   return (
     <div className="bg-gray-50 min-h-screen">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-slate-800 shadow-lg border-slate-700 border-b">
         <div className="mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <Link href="/manager" className="flex items-center">
-                <BarChart3 className="mr-2 w-8 h-8 text-blue-600" />
-                <span className="font-semibold text-gray-900 text-xl">
+                <BarChart3 className="mr-3 w-7 h-7 text-slate-300" />
+                <span className="font-semibold text-white text-xl">
                   Manager Dashboard
                 </span>
               </Link>
@@ -24,25 +24,25 @@ export default function ManagerLayout({
             <nav className="flex space-x-8">
               <Link
                 href="/manager"
-                className="px-3 py-2 rounded-md font-medium text-gray-500 hover:text-gray-700 text-sm"
+                className="hover:bg-slate-700 px-3 py-2 rounded-md font-medium text-slate-300 hover:text-white text-sm transition-colors"
               >
                 Dashboard
               </Link>
               <Link
                 href="/manager/conversations"
-                className="px-3 py-2 rounded-md font-medium text-gray-500 hover:text-gray-700 text-sm"
+                className="hover:bg-slate-700 px-3 py-2 rounded-md font-medium text-slate-300 hover:text-white text-sm transition-colors"
               >
                 Conversations
               </Link>
               <Link
                 href="/manager/performance"
-                className="px-3 py-2 rounded-md font-medium text-gray-500 hover:text-gray-700 text-sm"
+                className="hover:bg-slate-700 px-3 py-2 rounded-md font-medium text-slate-300 hover:text-white text-sm transition-colors"
               >
                 Performance
               </Link>
               <Link
                 href="/manager/config"
-                className="px-3 py-2 rounded-md font-medium text-gray-500 hover:text-gray-700 text-sm"
+                className="hover:bg-slate-700 px-3 py-2 rounded-md font-medium text-slate-300 hover:text-white text-sm transition-colors"
               >
                 Configuration
               </Link>
@@ -51,10 +51,10 @@ export default function ManagerLayout({
             <div className="flex items-center space-x-4">
               <Link
                 href="/"
-                className="flex items-center text-gray-500 hover:text-gray-700"
+                className="flex items-center hover:bg-slate-700 px-3 py-2 rounded-md text-slate-300 hover:text-white transition-colors"
               >
-                <LogOut className="mr-1 w-4 h-4" />
-                <span className="text-sm">Exit</span>
+                <LogOut className="mr-2 w-4 h-4" />
+                <span className="font-medium text-sm">Exit</span>
               </Link>
             </div>
           </div>

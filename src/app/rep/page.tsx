@@ -176,11 +176,11 @@ export default function RepPortal() {
   return (
     <div className={`${poppins.variable} ${quicksand.variable} bg-gray-50 min-h-screen`} suppressHydrationWarning>
       {/* Header */}
-      <header className="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 shadow-lg border-slate-700 border-b">
+      <header className="bg-slate-800 shadow-lg border-slate-700 border-b">
         <div className="mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <div className="flex justify-center items-center bg-gradient-to-r from-cyan-500 to-purple-600 mr-3 rounded-lg w-10 h-10">
+              <div className="flex justify-center items-center bg-slate-600 mr-3 rounded-lg w-10 h-10">
                 <Phone className="w-5 h-5 text-white" />
               </div>
               <div className="flex flex-col">
@@ -188,7 +188,7 @@ export default function RepPortal() {
                   Sales Rep Dashboard
                 </span>
                 {currentUser && (
-                  <span className={`${poppins.className} font-medium text-cyan-300 text-sm`}>
+                  <span className={`${poppins.className} font-medium text-slate-300 text-sm`}>
                     Welcome, {currentUser.firstName} {currentUser.lastName}
                   </span>
                 )}
@@ -197,13 +197,13 @@ export default function RepPortal() {
             <div className="flex items-center space-x-4">
               {currentUser && (
                 <div className="hidden md:flex items-center space-x-2 text-slate-300 text-sm">
-                  <div className="bg-emerald-500 rounded-full w-2 h-2 animate-pulse"></div>
+                  <div className="bg-green-500 rounded-full w-2 h-2 animate-pulse"></div>
                   <span>Online</span>
                 </div>
               )}
               <button
                 onClick={handleLogout}
-                className={`${poppins.className} bg-red-600 hover:bg-red-700 hover:shadow-md px-4 py-2 rounded-lg font-semibold text-white transition-colors duration-200`}
+                className={`${poppins.className} bg-slate-600 hover:bg-slate-700 hover:shadow-md px-4 py-2 rounded-lg font-semibold text-white transition-colors duration-200`}
               >
                 Sign Out
               </button>

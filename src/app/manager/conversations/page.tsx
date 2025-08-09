@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Eye, Search, Filter } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Eye, Search, Filter, Loader2 } from 'lucide-react'
 
 interface Conversation {
   id: string
@@ -21,28 +21,36 @@ export default function ConversationsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedGrade, setSelectedGrade] = useState('all')
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [transcriptSearch, setTranscriptSearch] = useState('')
+  const [highlightedLine, setHighlightedLine] = useState<number | null>(null)
 
-  // Mock data - replace with actual API call
-  const conversations: Conversation[] = [
-    {
-      id: '1',
-      user: { firstName: 'Tara', lastName: 'Buonforte', email: 'tarabuonforte@example.com' },
-      transcript: 'This is a sample conversation transcript...',
-      duration: 300,
-      grade: 'A',
-      summary: 'Excellent call with great rapport building and clear value proposition.',
-      createdAt: '2024-01-15T10:30:00Z'
-    },
-    {
-      id: '2',
-      user: { firstName: 'Philip', lastName: 'Buonforte', email: 'philipbuonforte@gmail.com' },
-      transcript: 'Another conversation transcript...',
-      duration: 450,
-      grade: 'B',
-      summary: 'Good call with room for improvement in objection handling.',
-      createdAt: '2024-01-15T09:15:00Z'
+  // Fetch conversations from database
+  useEffect(() => {
+    const fetchConversations = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+        
+        const response = await fetch('/api/conversations')
+        if (!response.ok) {
+          throw new Error('Failed to fetch conversations')
+        }
+        
+        const data = await response.json()
+        setConversations(data)
+      } catch (err) {
+        console.error('Error fetching conversations:', err)
+        setError('Failed to load conversations. Please try again.')
+      } finally {
+        setIsLoading(false)
+      }
     }
-  ]
+
+    fetchConversations()
+  }, [])
 
   const filteredConversations = conversations.filter(conv => {
     const matchesSearch = conv.user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -67,6 +75,12 @@ export default function ConversationsPage() {
       case 'F': return 'bg-red-100 text-red-800'
       default: return 'bg-gray-100 text-gray-800'
     }
+  }
+
+  const highlightText = (text: string, searchTerm: string) => {
+    if (!searchTerm) return text
+    const regex = new RegExp(`(${searchTerm})`, 'gi')
+    return text.replace(regex, '<mark class="bg-yellow-200 px-1 rounded">$1</mark>')
   }
 
   return (
@@ -112,10 +126,49 @@ export default function ConversationsPage() {
         </div>
       </div>
 
+      {/* Loading State */}
+      {isLoading && (
+        <div className="bg-white shadow p-8 rounded-lg">
+          <div className="flex justify-center items-center">
+            <Loader2 className="mr-3 w-8 h-8 text-blue-600 animate-spin" />
+            <span className="text-gray-600">Loading conversations...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="bg-red-50 p-4 border border-red-200 rounded-lg">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <div className="flex justify-center items-center bg-red-400 rounded-full w-5 h-5">
+                <span className="text-white text-xs">!</span>
+              </div>
+            </div>
+            <div className="ml-3">
+              <p className="text-red-800 text-sm">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Conversations Table */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="divide-y divide-gray-200 min-w-full">
+      {!isLoading && !error && (
+        <>
+          {conversations.length === 0 ? (
+            <div className="bg-white shadow p-8 rounded-lg">
+              <div className="text-center">
+                <div className="flex justify-center items-center bg-gray-100 mx-auto mb-4 rounded-full w-16 h-16">
+                  <Eye className="w-8 h-8 text-gray-400" />
+                </div>
+                <h3 className="mb-2 font-medium text-gray-900 text-lg">No conversations yet</h3>
+                <p className="text-gray-600">Conversations will appear here once sales reps start making calls.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white shadow rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="divide-y divide-gray-200 min-w-full">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
@@ -172,42 +225,192 @@ export default function ConversationsPage() {
           </table>
         </div>
       </div>
+          )}
+        </>
+      )}
 
       {/* Transcript Modal */}
       {selectedConversation && (
-        <div className="z-50 fixed inset-0 bg-gray-600 bg-opacity-50 w-full h-full overflow-y-auto">
-          <div className="top-20 relative bg-white shadow-lg mx-auto p-5 border rounded-md w-11/12 md:w-3/4 lg:w-1/2">
-            <div className="mt-3">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-medium text-gray-900 text-lg">
-                  Transcript - {selectedConversation.user.firstName} {selectedConversation.user.lastName}
-                </h3>
+        <div className="z-50 fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
+          <div className="bg-white shadow-2xl rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 text-white">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="font-bold text-xl">
+                    Conversation Transcript
+                  </h3>
+                  <p className="mt-1 text-blue-100 text-sm">
+                    {selectedConversation.user.firstName} {selectedConversation.user.lastName} • {selectedConversation.user.email}
+                  </p>
+                </div>
                 <button
                   onClick={() => setSelectedConversation(null)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="hover:bg-white hover:bg-opacity-20 p-2 rounded-full text-white hover:text-blue-100 transition-colors"
                 >
-                  ✕
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
               </div>
-              
-              <div className="space-y-4">
-                <div className="flex items-center space-x-4 text-gray-600 text-sm">
-                  <span>Duration: {formatDuration(selectedConversation.duration)}</span>
-                  <span>Grade: <span className={`px-2 py-1 rounded-full ${getGradeColor(selectedConversation.grade)}`}>{selectedConversation.grade}</span></span>
-                  <span>Date: {new Date(selectedConversation.createdAt).toLocaleDateString()}</span>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 max-h-[calc(90vh-120px)] overflow-y-auto">
+              {/* Stats Cards */}
+              <div className="gap-4 grid grid-cols-1 md:grid-cols-3 mb-6">
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 border border-green-200 rounded-xl">
+                  <div className="flex items-center">
+                    <div className="bg-green-500 mr-3 p-2 rounded-lg">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-medium text-green-600 text-sm">Duration</p>
+                      <p className="font-bold text-green-900 text-lg">{formatDuration(selectedConversation.duration)}</p>
+                    </div>
+                  </div>
                 </div>
-                
-                <div>
-                  <h4 className="mb-2 font-medium text-gray-900">Summary</h4>
-                  <p className="bg-gray-50 p-3 rounded-lg text-gray-700 text-sm">
+
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 border border-blue-200 rounded-xl">
+                  <div className="flex items-center">
+                    <div className="bg-blue-500 mr-3 p-2 rounded-lg">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-medium text-blue-600 text-sm">Grade</p>
+                      <p className={`text-lg font-bold ${getGradeColor(selectedConversation.grade).replace('bg-', 'text-').replace('-100', '-900')}`}>
+                        {selectedConversation.grade}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 border border-purple-200 rounded-xl">
+                  <div className="flex items-center">
+                    <div className="bg-purple-500 mr-3 p-2 rounded-lg">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-medium text-purple-600 text-sm">Date</p>
+                      <p className="font-bold text-purple-900 text-lg">
+                        {new Date(selectedConversation.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Summary Section */}
+              <div className="mb-6">
+                <div className="flex items-center mb-3">
+                  <div className="bg-gradient-to-r from-amber-500 to-orange-500 mr-3 p-2 rounded-lg">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <h4 className="font-semibold text-gray-900 text-lg">AI Analysis Summary</h4>
+                </div>
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 border border-amber-200 rounded-xl">
+                  <p className="text-gray-800 leading-relaxed">
                     {selectedConversation.summary}
                   </p>
                 </div>
+              </div>
+
+              {/* Transcript Section */}
+              <div>
+                <div className="flex justify-between items-center mb-3">
+                  <div className="flex items-center">
+                    <div className="bg-gradient-to-r from-indigo-500 to-purple-500 mr-3 p-2 rounded-lg">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                    </div>
+                    <h4 className="font-semibold text-gray-900 text-lg">Full Conversation Transcript</h4>
+                  </div>
+                  <div className="text-gray-500 text-sm">
+                    {selectedConversation.transcript.split('\n').length} lines
+                  </div>
+                </div>
                 
-                <div>
-                  <h4 className="mb-2 font-medium text-gray-900">Full Transcript</h4>
-                  <div className="bg-gray-50 p-3 rounded-lg max-h-96 overflow-y-auto text-gray-700 text-sm">
-                    {selectedConversation.transcript}
+                <div className="bg-gray-50 border border-gray-200 rounded-xl overflow-hidden">
+                  {/* Transcript Header */}
+                  <div className="bg-gray-100 px-4 py-2 border-gray-200 border-b">
+                    <div className="flex justify-between items-center text-gray-600 text-sm">
+                      <div className="flex items-center space-x-4">
+                        <span>Scroll to read the full conversation</span>
+                        <div className="flex items-center space-x-2">
+                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                          </svg>
+                          <input
+                            type="text"
+                            placeholder="Search in transcript..."
+                            value={transcriptSearch}
+                            onChange={(e) => setTranscriptSearch(e.target.value)}
+                            className="px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 w-32 text-xs"
+                          />
+                        </div>
+                      </div>
+                      <span className="font-mono">
+                        {Math.round(selectedConversation.transcript.length / 1000 * 10) / 10}k characters
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Transcript Content */}
+                  <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                    <div className="p-4">
+                      <div className="space-y-3">
+                        {selectedConversation.transcript.split('\n').map((line, index) => {
+                          const isUser = line.toLowerCase().includes('user:') || line.toLowerCase().includes('rep:')
+                          const isAssistant = line.toLowerCase().includes('assistant:') || line.toLowerCase().includes('customer:')
+                          const hasSearchMatch = transcriptSearch && line.toLowerCase().includes(transcriptSearch.toLowerCase())
+                          
+                          return (
+                            <div key={index} className={`p-3 rounded-lg transition-all duration-200 ${
+                              hasSearchMatch 
+                                ? 'bg-yellow-50 border-l-4 border-yellow-400 shadow-sm' 
+                                : isUser 
+                                ? 'bg-blue-50 border-l-4 border-blue-400' 
+                                : isAssistant 
+                                ? 'bg-gray-50 border-l-4 border-gray-400' 
+                                : 'bg-white'
+                            }`}>
+                              <div className={`text-sm leading-relaxed ${
+                                isUser 
+                                  ? 'text-blue-900 font-medium' 
+                                  : isAssistant 
+                                  ? 'text-gray-900 font-medium' 
+                                  : 'text-gray-700'
+                              }`}>
+                                {transcriptSearch ? (
+                                  <span dangerouslySetInnerHTML={{ 
+                                    __html: highlightText(line || '\u00A0', transcriptSearch) 
+                                  }} />
+                                ) : (
+                                  line || '\u00A0'
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Transcript Footer */}
+                  <div className="bg-gray-100 px-4 py-2 border-gray-200 border-t">
+                    <div className="flex justify-between items-center text-gray-500 text-xs">
+                      <span>End of conversation</span>
+                      <span>Duration: {formatDuration(selectedConversation.duration)}</span>
+                    </div>
                   </div>
                 </div>
               </div>

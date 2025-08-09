@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { TrendingUp, Users, Clock, Award } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { TrendingUp, Users, Clock, Award, Loader2 } from 'lucide-react'
 
 interface PerformanceData {
   userId: string
@@ -12,37 +12,76 @@ interface PerformanceData {
   }
   totalCalls: number
   avgGrade: string
-  totalMinutes: number
-  date: string
+  totalDuration: number
+  lastActivity: string | null
+}
+
+interface PerformanceSummary {
+  totalReps: number
+  totalCalls: number
+  overallAvgGrade: string
+  totalHours: number
+}
+
+interface GradeDistribution {
+  A: number
+  B: number
+  C: number
+  D: number
+  F: number
+}
+
+interface CallTrend {
+  day: string
+  calls: number
 }
 
 export default function PerformancePage() {
   const [selectedPeriod, setSelectedPeriod] = useState('week')
+  const [performanceData, setPerformanceData] = useState<PerformanceData[]>([])
+  const [summary, setSummary] = useState<PerformanceSummary>({
+    totalReps: 0,
+    totalCalls: 0,
+    overallAvgGrade: 'N/A',
+    totalHours: 0
+  })
+  const [gradeDistribution, setGradeDistribution] = useState<GradeDistribution>({
+    A: 0, B: 0, C: 0, D: 0, F: 0
+  })
+  const [callTrend, setCallTrend] = useState<CallTrend[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Mock data - replace with actual API call
-  const performanceData: PerformanceData[] = [
-    {
-      userId: '1',
-      user: { firstName: 'Tara', lastName: 'Buonforte', email: 'tarabuonforte@example.com' },
-      totalCalls: 45,
-      avgGrade: 'A',
-      totalMinutes: 1200,
-      date: '2024-01-15'
-    },
-    {
-      userId: '2',
-      user: { firstName: 'Philip', lastName: 'Buonforte', email: 'philipbuonforte@gmail.com' },
-      totalCalls: 38,
-      avgGrade: 'B+',
-      totalMinutes: 900,
-      date: '2024-01-15'
+  const fetchPerformanceData = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      
+      const response = await fetch(`/api/manager/performance?period=${selectedPeriod}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch performance data')
+      }
+      
+      const data = await response.json()
+      setPerformanceData(data.performanceData)
+      setSummary(data.summary)
+      setGradeDistribution(data.gradeDistribution)
+      setCallTrend(data.callTrend)
+    } catch (err) {
+      console.error('Error fetching performance data:', err)
+      setError('Failed to load performance data. Please try again.')
+    } finally {
+      setIsLoading(false)
     }
-  ]
+  }
+
+  useEffect(() => {
+    fetchPerformanceData()
+  }, [selectedPeriod])
 
   const getGradeColor = (grade: string) => {
     switch (grade) {
       case 'A': return 'bg-green-100 text-green-800'
-      case 'B+': return 'bg-blue-100 text-blue-800'
       case 'B': return 'bg-blue-100 text-blue-800'
       case 'C': return 'bg-yellow-100 text-yellow-800'
       case 'D': return 'bg-orange-100 text-orange-800'
@@ -51,10 +90,10 @@ export default function PerformancePage() {
     }
   }
 
-  const formatDuration = (minutes: number) => {
-    const hours = Math.floor(minutes / 60)
-    const remainingMinutes = minutes % 60
-    return `${hours}h ${remainingMinutes}m`
+  const formatDuration = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = seconds % 60
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
   }
 
   return (
@@ -80,222 +119,237 @@ export default function PerformancePage() {
         </div>
       </div>
 
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex justify-center items-center py-12">
+          <div className="flex items-center space-x-2">
+            <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
+            <span className="text-gray-600">Loading performance data...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="bg-red-50 p-4 border border-red-200 rounded-lg">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <div className="flex justify-center items-center bg-red-400 rounded-full w-5 h-5">
+                <span className="text-white text-xs">!</span>
+              </div>
+            </div>
+            <div className="ml-3">
+              <p className="text-red-800 text-sm">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Summary Cards */}
-      <div className="gap-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-        <div className="bg-white shadow p-6 rounded-lg">
-          <div className="flex items-center">
-            <div className="bg-blue-100 p-2 rounded-lg">
-              <Users className="w-6 h-6 text-blue-600" />
-            </div>
-            <div className="ml-4">
-              <p className="font-medium text-gray-600 text-sm">Active Reps</p>
-              <p className="font-semibold text-gray-900 text-2xl">12</p>
+      {!isLoading && !error && (
+        <div className="gap-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+          <div className="bg-white shadow p-6 rounded-lg">
+            <div className="flex items-center">
+              <div className="bg-blue-100 p-2 rounded-lg">
+                <Users className="w-6 h-6 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <p className="font-medium text-gray-600 text-sm">Active Reps</p>
+                <p className="font-semibold text-gray-900 text-2xl">{summary.totalReps}</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white shadow p-6 rounded-lg">
-          <div className="flex items-center">
-            <div className="bg-green-100 p-2 rounded-lg">
-              <TrendingUp className="w-6 h-6 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="font-medium text-gray-600 text-sm">Total Calls</p>
-              <p className="font-semibold text-gray-900 text-2xl">1,247</p>
+          <div className="bg-white shadow p-6 rounded-lg">
+            <div className="flex items-center">
+              <div className="bg-green-100 p-2 rounded-lg">
+                <TrendingUp className="w-6 h-6 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <p className="font-medium text-gray-600 text-sm">Total Calls</p>
+                <p className="font-semibold text-gray-900 text-2xl">{summary.totalCalls}</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white shadow p-6 rounded-lg">
-          <div className="flex items-center">
-            <div className="bg-purple-100 p-2 rounded-lg">
-              <Award className="w-6 h-6 text-purple-600" />
-            </div>
-            <div className="ml-4">
-              <p className="font-medium text-gray-600 text-sm">Avg Grade</p>
-              <p className="font-semibold text-gray-900 text-2xl">B+</p>
+          <div className="bg-white shadow p-6 rounded-lg">
+            <div className="flex items-center">
+              <div className="bg-purple-100 p-2 rounded-lg">
+                <Award className="w-6 h-6 text-purple-600" />
+              </div>
+              <div className="ml-4">
+                <p className="font-medium text-gray-600 text-sm">Avg Grade</p>
+                <p className="font-semibold text-gray-900 text-2xl">{summary.overallAvgGrade}</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white shadow p-6 rounded-lg">
-          <div className="flex items-center">
-            <div className="bg-orange-100 p-2 rounded-lg">
-              <Clock className="w-6 h-6 text-orange-600" />
-            </div>
-            <div className="ml-4">
-              <p className="font-medium text-gray-600 text-sm">Total Hours</p>
-              <p className="font-semibold text-gray-900 text-2xl">141</p>
+          <div className="bg-white shadow p-6 rounded-lg">
+            <div className="flex items-center">
+              <div className="bg-orange-100 p-2 rounded-lg">
+                <Clock className="w-6 h-6 text-orange-600" />
+              </div>
+              <div className="ml-4">
+                <p className="font-medium text-gray-600 text-sm">Total Duration</p>
+                <p className="font-semibold text-gray-900 text-2xl">{formatDuration(summary.totalHours * 3600)}</p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Performance Table */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-gray-200 border-b">
-          <h3 className="font-semibold text-gray-900 text-lg">Individual Performance</h3>
+      {!isLoading && !error && (
+        <div className="bg-white shadow rounded-lg overflow-hidden">
+          <div className="px-6 py-4 border-gray-200 border-b">
+            <h3 className="font-semibold text-gray-900 text-lg">Individual Performance</h3>
+          </div>
+          <div className="overflow-x-auto">
+            {performanceData.length === 0 ? (
+              <div className="py-12 text-center">
+                <div className="flex justify-center items-center bg-gray-100 mx-auto mb-4 rounded-full w-16 h-16">
+                  <Users className="w-8 h-8 text-gray-400" />
+                </div>
+                <h3 className="mb-2 font-medium text-gray-900 text-lg">No performance data</h3>
+                <p className="text-gray-600">Performance data will appear here once sales reps start making calls.</p>
+              </div>
+            ) : (
+              <table className="divide-y divide-gray-200 min-w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
+                      Rep
+                    </th>
+                    <th className="px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
+                      Total Calls
+                    </th>
+                    <th className="px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
+                      Avg Grade
+                    </th>
+                    <th className="px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
+                      Total Duration
+                    </th>
+                    <th className="px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
+                      Last Activity
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {performanceData.map((performance) => (
+                    <tr key={performance.userId} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="font-medium text-gray-900 text-sm">
+                            {performance.user.firstName} {performance.user.lastName}
+                          </div>
+                          <div className="text-gray-500 text-sm">{performance.user.email}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-gray-900 text-sm whitespace-nowrap">
+                        {performance.totalCalls}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getGradeColor(performance.avgGrade)}`}>
+                          {performance.avgGrade}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-gray-900 text-sm whitespace-nowrap">
+                        {formatDuration(performance.totalDuration)}
+                      </td>
+                      <td className="px-6 py-4 text-gray-500 text-sm whitespace-nowrap">
+                        {performance.lastActivity ? 
+                          new Date(performance.lastActivity).toLocaleDateString() : 
+                          'No activity'
+                        }
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="divide-y divide-gray-200 min-w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
-                  Rep
-                </th>
-                <th className="px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
-                  Total Calls
-                </th>
-                <th className="px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
-                  Avg Grade
-                </th>
-                <th className="px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
-                  Total Minutes
-                </th>
-                <th className="px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
-                  Performance
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {performanceData.map((performance) => (
-                <tr key={performance.userId} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="font-medium text-gray-900 text-sm">
-                        {performance.user.firstName} {performance.user.lastName}
-                      </div>
-                      <div className="text-gray-500 text-sm">{performance.user.email}</div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-gray-900 text-sm whitespace-nowrap">
-                    {performance.totalCalls}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getGradeColor(performance.avgGrade)}`}>
-                      {performance.avgGrade}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-gray-900 text-sm whitespace-nowrap">
-                    {formatDuration(performance.totalMinutes)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="bg-gray-200 mr-2 rounded-full w-16 h-2">
-                        <div 
-                          className="bg-blue-600 rounded-full h-2" 
-                          style={{ width: `${(performance.totalCalls / 50) * 100}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-gray-500 text-xs">
-                        {Math.round((performance.totalCalls / 50) * 100)}%
-                      </span>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      )}
 
       {/* Charts Section */}
-      <div className="gap-6 grid grid-cols-1 lg:grid-cols-2">
-        {/* Grade Distribution */}
-        <div className="bg-white shadow p-6 rounded-lg">
-          <h3 className="mb-4 font-semibold text-gray-900 text-lg">Grade Distribution</h3>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600 text-sm">Grade A</span>
-              <div className="flex items-center">
-                <div className="bg-gray-200 mr-2 rounded-full w-32 h-2">
-                  <div className="bg-green-600 rounded-full h-2" style={{ width: '35%' }}></div>
+      {!isLoading && !error && (
+        <div className="gap-6 grid grid-cols-1 lg:grid-cols-2">
+          {/* Grade Distribution */}
+          <div className="bg-white shadow p-6 rounded-lg">
+            <h3 className="mb-4 font-semibold text-gray-900 text-lg">Grade Distribution</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 text-sm">Grade A</span>
+                <div className="flex items-center">
+                  <div className="bg-gray-200 mr-2 rounded-full w-32 h-2">
+                    <div className="bg-green-600 rounded-full h-2" style={{ width: `${gradeDistribution.A}%` }}></div>
+                  </div>
+                  <span className="text-gray-500 text-xs">{gradeDistribution.A}%</span>
                 </div>
-                <span className="text-gray-500 text-xs">35%</span>
               </div>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600 text-sm">Grade B</span>
-              <div className="flex items-center">
-                <div className="bg-gray-200 mr-2 rounded-full w-32 h-2">
-                  <div className="bg-blue-600 rounded-full h-2" style={{ width: '45%' }}></div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 text-sm">Grade B</span>
+                <div className="flex items-center">
+                  <div className="bg-gray-200 mr-2 rounded-full w-32 h-2">
+                    <div className="bg-blue-600 rounded-full h-2" style={{ width: `${gradeDistribution.B}%` }}></div>
+                  </div>
+                  <span className="text-gray-500 text-xs">{gradeDistribution.B}%</span>
                 </div>
-                <span className="text-gray-500 text-xs">45%</span>
               </div>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600 text-sm">Grade C</span>
-              <div className="flex items-center">
-                <div className="bg-gray-200 mr-2 rounded-full w-32 h-2">
-                  <div className="bg-yellow-600 rounded-full h-2" style={{ width: '15%' }}></div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 text-sm">Grade C</span>
+                <div className="flex items-center">
+                  <div className="bg-gray-200 mr-2 rounded-full w-32 h-2">
+                    <div className="bg-yellow-600 rounded-full h-2" style={{ width: `${gradeDistribution.C}%` }}></div>
+                  </div>
+                  <span className="text-gray-500 text-xs">{gradeDistribution.C}%</span>
                 </div>
-                <span className="text-gray-500 text-xs">15%</span>
               </div>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600 text-sm">Grade D/F</span>
-              <div className="flex items-center">
-                <div className="bg-gray-200 mr-2 rounded-full w-32 h-2">
-                  <div className="bg-red-600 rounded-full h-2" style={{ width: '5%' }}></div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 text-sm">Grade D</span>
+                <div className="flex items-center">
+                  <div className="bg-gray-200 mr-2 rounded-full w-32 h-2">
+                    <div className="bg-orange-600 rounded-full h-2" style={{ width: `${gradeDistribution.D}%` }}></div>
+                  </div>
+                  <span className="text-gray-500 text-xs">{gradeDistribution.D}%</span>
                 </div>
-                <span className="text-gray-500 text-xs">5%</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 text-sm">Grade F</span>
+                <div className="flex items-center">
+                  <div className="bg-gray-200 mr-2 rounded-full w-32 h-2">
+                    <div className="bg-red-600 rounded-full h-2" style={{ width: `${gradeDistribution.F}%` }}></div>
+                  </div>
+                  <span className="text-gray-500 text-xs">{gradeDistribution.F}%</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Call Volume Trend */}
-        <div className="bg-white shadow p-6 rounded-lg">
-          <h3 className="mb-4 font-semibold text-gray-900 text-lg">Call Volume Trend</h3>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600 text-sm">Monday</span>
-              <div className="flex items-center">
-                <div className="bg-gray-200 mr-2 rounded-full w-32 h-2">
-                  <div className="bg-blue-600 rounded-full h-2" style={{ width: '80%' }}></div>
-                </div>
-                <span className="text-gray-500 text-xs">80</span>
-              </div>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600 text-sm">Tuesday</span>
-              <div className="flex items-center">
-                <div className="bg-gray-200 mr-2 rounded-full w-32 h-2">
-                  <div className="bg-blue-600 rounded-full h-2" style={{ width: '90%' }}></div>
-                </div>
-                <span className="text-gray-500 text-xs">90</span>
-              </div>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600 text-sm">Wednesday</span>
-              <div className="flex items-center">
-                <div className="bg-gray-200 mr-2 rounded-full w-32 h-2">
-                  <div className="bg-blue-600 rounded-full h-2" style={{ width: '75%' }}></div>
-                </div>
-                <span className="text-gray-500 text-xs">75</span>
-              </div>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600 text-sm">Thursday</span>
-              <div className="flex items-center">
-                <div className="bg-gray-200 mr-2 rounded-full w-32 h-2">
-                  <div className="bg-blue-600 rounded-full h-2" style={{ width: '85%' }}></div>
-                </div>
-                <span className="text-gray-500 text-xs">85</span>
-              </div>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600 text-sm">Friday</span>
-              <div className="flex items-center">
-                <div className="bg-gray-200 mr-2 rounded-full w-32 h-2">
-                  <div className="bg-blue-600 rounded-full h-2" style={{ width: '70%' }}></div>
-                </div>
-                <span className="text-gray-500 text-xs">70</span>
-              </div>
+          {/* Call Volume Trend */}
+          <div className="bg-white shadow p-6 rounded-lg">
+            <h3 className="mb-4 font-semibold text-gray-900 text-lg">Call Volume Trend (Last 7 Days)</h3>
+            <div className="space-y-3">
+              {callTrend.map((day) => {
+                const maxCalls = Math.max(...callTrend.map(d => d.calls))
+                const percentage = maxCalls > 0 ? (day.calls / maxCalls) * 100 : 0
+                
+                return (
+                  <div key={day.day} className="flex justify-between items-center">
+                    <span className="text-gray-600 text-sm">{day.day}</span>
+                    <div className="flex items-center">
+                      <div className="bg-gray-200 mr-2 rounded-full w-32 h-2">
+                        <div className="bg-blue-600 rounded-full h-2" style={{ width: `${percentage}%` }}></div>
+                      </div>
+                      <span className="text-gray-500 text-xs">{day.calls}</span>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 } 

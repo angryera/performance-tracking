@@ -13,15 +13,36 @@ export async function GET() {
     // Get total number of conversations
     const totalCalls = await prisma.conversation.count()
 
-    // Get total minutes from users
-    const totalMinutes = await prisma.user.aggregate({
-      where: {
-        role: 'REP'
-      },
+    // Get total minutes from conversations (actual usage)
+    const totalMinutesFromConversations = await prisma.conversation.aggregate({
       _sum: {
-        minutes: true
+        duration: true
       }
     })
+
+    // Get granted minutes from global settings
+    const globalSettings = await prisma.globalSettings.findFirst()
+    const grantedMinutes = globalSettings?.grantedMinutes || 0
+
+    // Calculate total minutes (convert seconds to minutes)
+    const totalMinutesUsed = Math.round((totalMinutesFromConversations._sum.duration || 0) / 60)
+
+    // Get sample conversations for debugging
+    const sampleConversations = await prisma.conversation.findMany({
+      take: 3,
+      select: {
+        id: true,
+        duration: true,
+        createdAt: true,
+        user: {
+          select: {
+            firstName: true,
+            lastName: true
+          }
+        }
+      }
+    })
+    console.log('- Sample conversations:', sampleConversations)
 
     // Calculate average grade from conversations
     const conversations = await prisma.conversation.findMany({
@@ -65,7 +86,8 @@ export async function GET() {
       totalReps,
       totalCalls,
       avgGrade,
-      totalMinutes: totalMinutes._sum.minutes || 0
+      totalMinutes: totalMinutesUsed,
+      grantedMinutes
     })
 
   } catch (error) {

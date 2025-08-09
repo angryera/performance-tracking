@@ -8,6 +8,21 @@ interface DashboardStats {
   totalCalls: number
   avgGrade: string
   totalMinutes: number
+  grantedMinutes: number
+}
+
+interface RecentActivity {
+  id: string
+  type: 'conversation' | 'user_import'
+  message: string
+  grade?: string
+  duration?: number
+  timestamp: string
+  user: {
+    firstName: string
+    lastName: string
+    email: string
+  }
 }
 
 export default function ManagerDashboard() {
@@ -17,8 +32,10 @@ export default function ManagerDashboard() {
     totalReps: 0,
     totalCalls: 0,
     avgGrade: 'N/A',
-    totalMinutes: 0
+    totalMinutes: 0,
+    grantedMinutes: 0
   })
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([])
 
   const fetchStats = async () => {
     try {
@@ -32,9 +49,43 @@ export default function ManagerDashboard() {
     }
   }
 
+  const fetchRecentActivities = async () => {
+    try {
+      const response = await fetch('/api/manager/recent-activities')
+      if (response.ok) {
+        const data = await response.json()
+        setRecentActivities(data)
+      }
+    } catch (error) {
+      console.error('Error fetching recent activities:', error)
+    }
+  }
+
   useEffect(() => {
     fetchStats()
+    fetchRecentActivities()
   }, [])
+
+  const formatTimeAgo = (timestamp: string) => {
+    const now = new Date()
+    const time = new Date(timestamp)
+    const diffInMinutes = Math.floor((now.getTime() - time.getTime()) / (1000 * 60))
+    
+    if (diffInMinutes < 1) return 'Just now'
+    if (diffInMinutes < 60) return `${diffInMinutes} min ago`
+    
+    const diffInHours = Math.floor(diffInMinutes / 60)
+    if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`
+    
+    const diffInDays = Math.floor(diffInHours / 24)
+    return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`
+  }
+
+  const formatDuration = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = seconds % 60
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
+  }
 
   const handleImportData = async () => {
     setIsImporting(true)
@@ -47,8 +98,9 @@ export default function ManagerDashboard() {
       
       if (response.ok) {
         setImportStatus('Data imported successfully!')
-        // Refresh stats after successful import
+        // Refresh stats and activities after successful import
         fetchStats()
+        fetchRecentActivities()
       } else {
         setImportStatus('Failed to import data. Please check your configuration.')
       }
@@ -135,8 +187,9 @@ export default function ManagerDashboard() {
               <TrendingUp className="w-6 h-6 text-orange-600" />
             </div>
             <div className="ml-4">
-              <p className="font-medium text-gray-600 text-sm">Total Minutes</p>
+              <p className="font-medium text-gray-600 text-sm">Minutes Used</p>
               <p className="font-semibold text-gray-900 text-2xl">{stats.totalMinutes}</p>
+              <p className="text-gray-500 text-xs">of {stats.grantedMinutes} granted</p>
             </div>
           </div>
         </div>
@@ -180,21 +233,35 @@ export default function ManagerDashboard() {
         <div className="bg-white shadow p-6 rounded-lg">
           <h3 className="mb-4 font-semibold text-gray-900 text-lg">Recent Activity</h3>
           <div className="space-y-3">
-            <div className="flex items-center text-gray-600 text-sm">
-              <div className="bg-green-400 mr-3 rounded-full w-2 h-2"></div>
-              <span>New conversation recorded for Tara Buonforte</span>
-              <span className="ml-auto text-xs">2 min ago</span>
-            </div>
-            <div className="flex items-center text-gray-600 text-sm">
-              <div className="bg-blue-400 mr-3 rounded-full w-2 h-2"></div>
-              <span>Data imported from Google Sheets</span>
-              <span className="ml-auto text-xs">1 hour ago</span>
-            </div>
-            <div className="flex items-center text-gray-600 text-sm">
-              <div className="bg-purple-400 mr-3 rounded-full w-2 h-2"></div>
-              <span>Performance report generated</span>
-              <span className="ml-auto text-xs">3 hours ago</span>
-            </div>
+            {recentActivities.length === 0 ? (
+              <div className="py-4 text-center">
+                <p className="text-gray-500 text-sm">No recent activity</p>
+              </div>
+            ) : (
+              recentActivities.map((activity) => (
+                <div key={activity.id} className="flex items-center text-gray-600 text-sm">
+                  <div className={`mr-3 rounded-full w-2 h-2 ${
+                    activity.type === 'conversation' ? 'bg-green-400' : 'bg-blue-400'
+                  }`}></div>
+                  <div className="flex-1">
+                    <span>{activity.message}</span>
+                    {activity.grade && (
+                      <span className="bg-gray-100 ml-2 px-2 py-1 rounded text-xs">
+                        Grade: {activity.grade}
+                      </span>
+                    )}
+                    {activity.duration && (
+                      <span className="bg-gray-100 ml-2 px-2 py-1 rounded text-xs">
+                        {formatDuration(activity.duration)}
+                      </span>
+                    )}
+                  </div>
+                  <span className="ml-auto text-gray-400 text-xs">
+                    {formatTimeAgo(activity.timestamp)}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
