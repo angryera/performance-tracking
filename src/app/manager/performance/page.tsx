@@ -20,7 +20,7 @@ interface PerformanceSummary {
   totalReps: number
   totalCalls: number
   overallAvgGrade: string
-  totalHours: number
+  totalMinutes: number
 }
 
 interface GradeDistribution {
@@ -43,7 +43,7 @@ export default function PerformancePage() {
     totalReps: 0,
     totalCalls: 0,
     overallAvgGrade: 'N/A',
-    totalHours: 0
+    totalMinutes: 0
   })
   const [gradeDistribution, setGradeDistribution] = useState<GradeDistribution>({
     A: 0, B: 0, C: 0, D: 0, F: 0
@@ -191,7 +191,7 @@ export default function PerformancePage() {
               </div>
               <div className="ml-4">
                 <p className="font-medium text-gray-600 text-sm">Total Duration</p>
-                <p className="font-semibold text-gray-900 text-2xl">{formatDuration(summary.totalHours * 3600)}</p>
+                <p className="font-semibold text-gray-900 text-2xl">{summary.totalMinutes} minutes</p>
               </div>
             </div>
           </div>

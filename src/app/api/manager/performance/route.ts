@@ -167,7 +167,7 @@ export async function GET(request: NextRequest) {
         totalReps,
         totalCalls,
         overallAvgGrade,
-        totalHours: Math.round(totalDuration / 3600)
+        totalMinutes: Math.round(totalDuration / 60)
       },
       performanceData: performanceData.sort((a, b) => b.totalCalls - a.totalCalls),
       gradeDistribution: gradePercentages,
