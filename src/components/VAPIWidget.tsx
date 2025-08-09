@@ -9,7 +9,7 @@ import { createClient } from '@anam-ai/js-sdk'
 interface VAPIWidgetProps {
   userId?: string
   onTranscriptUpdate?: (transcript: string) => void
-  onCallEnd?: (duration: number, transcript: string) => void
+  onCallEnd?: (duration: number, transcript: string, mergedTranscript: Array<{role: string, text: string}>) => void
   remainingSeconds?: number
   onTimeLimitReached?: () => void
 }
@@ -361,7 +361,7 @@ export default function VAPIWidget({
 
       // Call the onCallEnd callback with accurate duration and transcript
       const transcriptStr = transcriptRef.current.map((t: any) => t.text).join(' ')
-      onCallEnd?.(finalDuration, transcriptStr)
+      onCallEnd?.(finalDuration, transcriptStr, getMergedTranscript())
 
       // Reset call tracking
       setCurrentCallId(null)

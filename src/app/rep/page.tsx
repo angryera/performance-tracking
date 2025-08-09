@@ -271,8 +271,8 @@ export default function RepPortal() {
                   fetchUserUsage(currentUser.id)
                 }
               }}
-              onCallEnd={async (duration, transcript) => {
-                console.log('Call ended:', { duration, transcript })
+              onCallEnd={async (duration, transcript, mergedTranscript) => {
+                console.log('Call ended:', { duration, transcript, mergedTranscript })
 
                 // Analyze transcript with AI first
                 let grade = null
@@ -302,7 +302,7 @@ export default function RepPortal() {
                   setIsAnalyzing(false)
                 }
 
-                // Save conversation to database with AI analysis and accurate duration
+                // Save conversation to database with AI analysis, accurate duration, and merged transcript
                 setIsSaving(true)
                 try {
                   const response = await fetch('/api/conversations', {
@@ -313,6 +313,7 @@ export default function RepPortal() {
                     body: JSON.stringify({
                       userId: currentUser?.id,
                       transcript,
+                      mergedTranscript, // Add the merged transcript with speaker identification
                       duration, // Now using accurate duration from timestamps
                       grade,
                       summary
@@ -320,7 +321,7 @@ export default function RepPortal() {
                   })
 
                   if (response.ok) {
-                    console.log('Conversation saved successfully with AI analysis and accurate duration:', duration)
+                    console.log('Conversation saved successfully with AI analysis, accurate duration, and merged transcript:', duration)
                   } else {
                     console.error('Failed to save conversation')
                   }

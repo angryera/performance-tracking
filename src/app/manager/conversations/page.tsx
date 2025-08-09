@@ -11,6 +11,7 @@ interface Conversation {
     email: string
   }
   transcript: string
+  mergedTranscript?: Array<{role: string, text: string}>
   duration: number
   grade: string
   summary: string
@@ -369,39 +370,88 @@ export default function ConversationsPage() {
                   <div className="max-h-64 sm:max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                     <div className="p-3 sm:p-4">
                       <div className="space-y-2 sm:space-y-3">
-                        {selectedConversation.transcript.split('\n').map((line, index) => {
-                          const isUser = line.toLowerCase().includes('user:') || line.toLowerCase().includes('rep:')
-                          const isAssistant = line.toLowerCase().includes('assistant:') || line.toLowerCase().includes('customer:')
-                          const hasSearchMatch = transcriptSearch && line.toLowerCase().includes(transcriptSearch.toLowerCase())
-                          
-                          return (
-                            <div key={index} className={`p-2 sm:p-3 rounded-lg transition-all duration-200 ${
-                              hasSearchMatch 
-                                ? 'bg-yellow-50 border-l-4 border-yellow-400 shadow-sm' 
-                                : isUser 
-                                ? 'bg-blue-50 border-l-4 border-blue-400' 
-                                : isAssistant 
-                                ? 'bg-gray-50 border-l-4 border-gray-400' 
-                                : 'bg-white'
-                            }`}>
-                              <div className={`text-xs sm:text-sm leading-relaxed ${
-                                isUser 
-                                  ? 'text-blue-900 font-medium' 
+                        {selectedConversation.mergedTranscript ? (
+                          // Use merged transcript with speaker identification
+                          selectedConversation.mergedTranscript.map((message, index) => {
+                            const isUser = message.role === 'user'
+                            const isAssistant = message.role === 'assistant'
+                            const hasSearchMatch = transcriptSearch && message.text.toLowerCase().includes(transcriptSearch.toLowerCase())
+                            
+                            return (
+                              <div key={index} className={`p-2 sm:p-3 rounded-lg transition-all duration-200 ${
+                                hasSearchMatch 
+                                  ? 'bg-yellow-50 border-l-4 border-yellow-400 shadow-sm' 
+                                  : isUser 
+                                  ? 'bg-blue-50 border-l-4 border-blue-400' 
                                   : isAssistant 
-                                  ? 'text-gray-900 font-medium' 
-                                  : 'text-gray-700'
+                                  ? 'bg-gray-50 border-l-4 border-gray-400' 
+                                  : 'bg-white'
                               }`}>
-                                {transcriptSearch ? (
-                                  <span dangerouslySetInnerHTML={{ 
-                                    __html: highlightText(line || '\u00A0', transcriptSearch) 
-                                  }} />
-                                ) : (
-                                  line || '\u00A0'
-                                )}
+                                <div className={`text-xs sm:text-sm leading-relaxed ${
+                                  isUser 
+                                    ? 'text-blue-900 font-medium' 
+                                    : isAssistant 
+                                    ? 'text-gray-900 font-medium' 
+                                    : 'text-gray-700'
+                                }`}>
+                                  <div className="flex items-start space-x-2">
+                                    <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
+                                      isUser 
+                                        ? 'bg-blue-500 text-white' 
+                                        : 'bg-gray-500 text-white'
+                                    }`}>
+                                      {isUser ? 'Me' : 'AI'}
+                                    </div>
+                                    <div className="flex-1">
+                                      {transcriptSearch ? (
+                                        <span dangerouslySetInnerHTML={{ 
+                                          __html: highlightText(message.text || '\u00A0', transcriptSearch) 
+                                        }} />
+                                      ) : (
+                                        message.text || '\u00A0'
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          )
-                        })}
+                            )
+                          })
+                        ) : (
+                          // Fallback to original transcript parsing
+                          selectedConversation.transcript.split('\n').map((line, index) => {
+                            const isUser = line.toLowerCase().includes('user:') || line.toLowerCase().includes('rep:')
+                            const isAssistant = line.toLowerCase().includes('assistant:') || line.toLowerCase().includes('customer:')
+                            const hasSearchMatch = transcriptSearch && line.toLowerCase().includes(transcriptSearch.toLowerCase())
+                            
+                            return (
+                              <div key={index} className={`p-2 sm:p-3 rounded-lg transition-all duration-200 ${
+                                hasSearchMatch 
+                                  ? 'bg-yellow-50 border-l-4 border-yellow-400 shadow-sm' 
+                                  : isUser 
+                                  ? 'bg-blue-50 border-l-4 border-blue-400' 
+                                  : isAssistant 
+                                  ? 'bg-gray-50 border-l-4 border-gray-400' 
+                                  : 'bg-white'
+                              }`}>
+                                <div className={`text-xs sm:text-sm leading-relaxed ${
+                                  isUser 
+                                    ? 'text-blue-900 font-medium' 
+                                    : isAssistant 
+                                    ? 'text-gray-900 font-medium' 
+                                    : 'text-gray-700'
+                                }`}>
+                                  {transcriptSearch ? (
+                                    <span dangerouslySetInnerHTML={{ 
+                                      __html: highlightText(line || '\u00A0', transcriptSearch) 
+                                    }} />
+                                  ) : (
+                                    line || '\u00A0'
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })
+                        )}
                       </div>
                     </div>
                   </div>

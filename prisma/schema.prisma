@@ -29,14 +29,15 @@ model User {
 }
 
 model Conversation {
-  id          String   @id @default(cuid())
-  userId      String
-  transcript  String
-  duration    Int      // in seconds
-  grade       String?  // A, B, C, D, F
-  summary     String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String   @id @default(cuid())
+  userId          String
+  transcript      String
+  mergedTranscript String? // JSON string containing structured conversation with speaker identification
+  duration        Int      // in seconds
+  grade           String?  // A, B, C, D, F
+  summary         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

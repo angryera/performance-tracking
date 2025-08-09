@@ -16,7 +16,7 @@ export const config = {
         apiKey: "ZjVlZjhmOGQtNWMxYi00ODMxLTg3ZDQtZDYxNWExN2NkZjBiOnE2S0hVeGVWeEdDVGpESFhVNHkwS0Zia1MwRENkc0MxYURNdWFNU3RrT3M9",
         apiUrl: "https://api.anam.ai/v1/auth/session-token",
         persona: {
-            name: "Customer Linda",
+            name: "Agent",
             llmId: "939de489-1b11-4b91-94b1-0e37223721ca",
             avatarId: "195d733e-58a9-40bb-a049-ac344fa70b7f",
             voiceId: "1a83b580-e8af-4f03-843d-8c5a0378d6c9",
