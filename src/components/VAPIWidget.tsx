@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Phone, Play, Square, Mic, MicOff, AlertCircle } from 'lucide-react'
+import { Phone, Play, Square, Mic, MicOff, AlertCircle, Clock } from 'lucide-react'
 import { config } from '@/lib/config'
 import Vapi from '@vapi-ai/web'
 import { createClient } from '@anam-ai/js-sdk'
@@ -10,15 +10,17 @@ interface VAPIWidgetProps {
   userId?: string
   onTranscriptUpdate?: (transcript: string) => void
   onCallEnd?: (duration: number, transcript: string) => void
+  remainingSeconds?: number
+  onTimeLimitReached?: () => void
 }
 
-
-
-
-
-
-
-export default function VAPIWidget({ userId, onTranscriptUpdate, onCallEnd }: VAPIWidgetProps) {
+export default function VAPIWidget({ 
+  userId, 
+  onTranscriptUpdate, 
+  onCallEnd, 
+  remainingSeconds = 0,
+  onTimeLimitReached 
+}: VAPIWidgetProps) {
   const [vapi, setVapi] = useState<any>(null)
   const [isCallActive, setIsCallActive] = useState(false)
   const [selectedMode, setSelectedMode] = useState<string>('practice')
@@ -36,6 +38,9 @@ export default function VAPIWidget({ userId, onTranscriptUpdate, onCallEnd }: VA
   const [displayDuration, setDisplayDuration] = useState<number>(0)
   const currentCallIdRef = useRef<string | null>(null)
   const callStartTimeRef = useRef<Date | null>(null)
+  const timeLimitReachedRef = useRef<boolean>(false)
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const audioStreamRef = useRef<MediaStream | null>(null)
 
   // Anam video assistant states
   const [showAnamChat, setShowAnamChat] = useState(false)
@@ -48,10 +53,82 @@ export default function VAPIWidget({ userId, onTranscriptUpdate, onCallEnd }: VA
     setTimeout(() => setError(null), config.ui.timeouts.errorToastDuration)
   }
 
+  // Check if user has enough time to start a call
+  const canStartCall = () => {
+    return remainingSeconds > 0 && !timeLimitReachedRef.current
+  }
+
+  // Check time limit during call
+  const checkTimeLimit = () => {
+    if (!isCallActive || !callStartTimeRef.current || timeLimitReachedRef.current) return
+
+    const currentTime = new Date()
+    const elapsedSeconds = Math.floor((currentTime.getTime() - callStartTimeRef.current.getTime()) / 1000)
+    const remainingAfterCall = remainingSeconds - elapsedSeconds
+
+    if (remainingAfterCall <= 0) {
+      console.log('⏰ Time limit reached! Stopping call...')
+      timeLimitReachedRef.current = true
+      endCall()
+      onTimeLimitReached?.()
+      showErrorToast('Time limit reached! Call has been automatically ended.')
+    }
+  }
+
+  // Mute/unmute functionality
+  const toggleMute = async () => {
+    try {
+      if (!isMuted) {
+        // Mute: Stop all audio tracks
+        if (audioStreamRef.current) {
+          audioStreamRef.current.getTracks().forEach(track => {
+            track.enabled = false
+          })
+        }
+        setIsMuted(true)
+        console.log('Microphone muted')
+      } else {
+        // Unmute: Enable all audio tracks
+        if (audioStreamRef.current) {
+          audioStreamRef.current.getTracks().forEach(track => {
+            track.enabled = true
+          })
+        }
+        setIsMuted(false)
+        console.log('Microphone unmuted')
+      }
+    } catch (error) {
+      console.error('Error toggling mute:', error)
+      showErrorToast('Failed to toggle mute. Please try again.')
+    }
+  }
+
+  // Get user media for mute functionality
+  const getUserMedia = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      audioStreamRef.current = stream
+      console.log('Audio stream obtained for mute functionality')
+    } catch (error) {
+      console.error('Error getting user media:', error)
+      // Don't show error toast as this is just for mute functionality
+    }
+  }
+
   const startCall = async (mode: string) => {
+    // Check if user has enough time
+    if (!canStartCall()) {
+      showErrorToast('No time remaining. Please contact your manager to add more time.')
+      return
+    }
+
     activeModeRef.current = mode
     setIsConnecting(true)
     setError(null)
+    timeLimitReachedRef.current = false
+
+    // Get user media for mute functionality
+    await getUserMedia()
 
     // If it's sell mode, show Anam video assistant instead of VAPI
     if (mode === 'sell') {
@@ -96,6 +173,15 @@ export default function VAPIWidget({ userId, onTranscriptUpdate, onCallEnd }: VA
   }
 
   const endCall = () => {
+    // Clean up audio stream
+    if (audioStreamRef.current) {
+      audioStreamRef.current.getTracks().forEach(track => track.stop())
+      audioStreamRef.current = null
+    }
+    
+    // Reset mute state
+    setIsMuted(false)
+    
     if (activeModeRef.current === 'sell') {
       endAnamChat()
     } else if (vapi) {
@@ -354,6 +440,7 @@ export default function VAPIWidget({ userId, onTranscriptUpdate, onCallEnd }: VA
         const currentTime = new Date()
         const duration = Math.floor((currentTime.getTime() - callStartTimeRef.current!.getTime()) / 1000)
         setDisplayDuration(duration)
+        checkTimeLimit() // Check time limit during the interval
       }, 1000)
     }
     return () => clearInterval(interval)
@@ -423,19 +510,71 @@ export default function VAPIWidget({ userId, onTranscriptUpdate, onCallEnd }: VA
 
         {/* Call Controls */}
         <div className="mb-6 text-center">
+          {/* Time Remaining Display */}
+          <div className="flex justify-center items-center space-x-2 mb-4">
+            <Clock className="w-5 h-5 text-gray-600" />
+            <span className="font-medium text-gray-700">
+              Time Remaining: {formatDuration(remainingSeconds)}
+            </span>
+            {remainingSeconds <= 0 && (
+              <div className="flex items-center ml-2 text-red-600">
+                <AlertCircle className="mr-1 w-4 h-4" />
+                <span className="font-medium text-sm">No time available</span>
+              </div>
+            )}
+            {remainingSeconds > 0 && remainingSeconds <= 300 && (
+              <div className="flex items-center ml-2 text-orange-600">
+                <AlertCircle className="mr-1 w-4 h-4" />
+                <span className="font-medium text-sm">Low time remaining</span>
+              </div>
+            )}
+          </div>
+
           {!isCallActive ? (
             <button
               onClick={() => startCall(selectedMode)}
-              className="inline-flex items-center bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-medium text-white transition-colors"
+              disabled={!canStartCall()}
+              className={`inline-flex items-center px-6 py-3 rounded-lg font-medium transition-colors ${
+                canStartCall()
+                  ? 'bg-green-600 hover:bg-green-700 text-white'
+                  : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+              }`}
             >
               <Play className="mr-2 w-5 h-5" />
-              Start {config.ui.trainingModes.find(m => m.id === selectedMode)?.title} Session
+              {canStartCall() 
+                ? `Start ${config.ui.trainingModes.find(m => m.id === selectedMode)?.title} Session`
+                : 'No Time Available'
+              }
             </button>
           ) : (
             <div className="flex justify-center items-center space-x-4">
               <div className="font-semibold text-gray-900 text-lg">
                 {formatDuration(displayDuration)}
               </div>
+              
+              {/* Mute Button */}
+              <button
+                onClick={toggleMute}
+                className={`inline-flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${
+                  isMuted 
+                    ? 'bg-red-500 hover:bg-red-600 text-white' 
+                    : 'bg-gray-500 hover:bg-gray-600 text-white'
+                }`}
+                title={isMuted ? 'Unmute' : 'Mute'}
+              >
+                {isMuted ? (
+                  <>
+                    <MicOff className="mr-2 w-4 h-4" />
+                    Unmuted
+                  </>
+                ) : (
+                  <>
+                    <Mic className="mr-2 w-4 h-4" />
+                    Muted
+                  </>
+                )}
+              </button>
+              
               <button
                 onClick={endCall}
                 className="inline-flex items-center bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg font-medium text-white transition-colors"
@@ -477,6 +616,12 @@ export default function VAPIWidget({ userId, onTranscriptUpdate, onCallEnd }: VA
                 <span className="bg-green-100 px-2 py-1 rounded-full font-medium text-green-800 text-xs">
                   {getMergedTranscript().length} messages
                 </span>
+                {isMuted && (
+                  <span className="flex items-center bg-red-100 px-2 py-1 rounded-full font-medium text-red-800 text-xs">
+                    <MicOff className="mr-1 w-3 h-3" />
+                    Muted
+                  </span>
+                )}
               </div>
               <div className="flex items-center space-x-2">
                 <button

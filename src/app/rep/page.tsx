@@ -261,8 +261,15 @@ export default function RepPortal() {
             {/* VAPI Widget */}
             <VAPIWidget
               userId={currentUser?.id}
+              remainingSeconds={userUsage?.remainingSeconds || 0}
               onTranscriptUpdate={(transcript) => {
                 console.log('Transcript updated:', transcript)
+              }}
+              onTimeLimitReached={() => {
+                console.log('Time limit reached, refreshing usage data...')
+                if (currentUser?.id) {
+                  fetchUserUsage(currentUser.id)
+                }
               }}
               onCallEnd={async (duration, transcript) => {
                 console.log('Call ended:', { duration, transcript })
