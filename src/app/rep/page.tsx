@@ -39,7 +39,7 @@ interface Conversation {
   id: string
   userId: string
   transcript: string
-  mergedTranscript?: string
+  mergedTranscript?: object
   duration: number
   grade?: string
   summary?: string
@@ -62,6 +62,7 @@ export default function RepPortal() {
     email: '',
     password: ''
   })
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
 
   // Check for existing session on component mount
   useEffect(() => {
@@ -547,9 +548,13 @@ export default function RepPortal() {
                   <p className="mt-1 text-gray-500 text-sm">Start making calls to see your conversation history here.</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {conversations.map((conversation) => (
-                    <div key={conversation.id} className="hover:bg-gray-50 p-4 border border-gray-200 rounded-lg transition-colors">
+                    <div 
+                      key={conversation.id} 
+                      onClick={() => setSelectedConversation(conversation)}
+                      className="hover:bg-gray-50 p-4 border border-gray-200 rounded-lg transition-colors cursor-pointer"
+                    >
                       <div className="flex justify-between items-start">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center space-x-2 mb-2">
@@ -570,50 +575,13 @@ export default function RepPortal() {
                               {new Date(conversation.createdAt).toLocaleDateString()}
                             </span>
                           </div>
-
-                          {conversation.mergedTranscript ? (
-                            <div className="space-y-2">
-                              {(() => {
-                                let messages: any[] = [];
-                                try {
-                                  messages = JSON.parse(conversation.mergedTranscript);
-                                  if (!Array.isArray(messages)) messages = [];
-                                } catch (e) {
-                                  // If JSON is invalid or empty, fallback to empty array
-                                  messages = [];
-                                }
-                                return messages.length > 0 ? (
-                                  messages.map((message: any, index: number) => (
-                                    <div key={index} className={`p-2 rounded ${message.role === 'user' ? 'bg-blue-50 border-l-4 border-blue-400' : 'bg-gray-50 border-l-4 border-gray-400'
-                                      }`}>
-                                      <div className="flex items-center space-x-2 mb-1">
-                                        <span className={`text-xs font-medium px-2 py-1 rounded ${message.role === 'user' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-                                          }`}>
-                                          {message.role === 'user' ? 'Me' : 'AI'}
-                                        </span>
-                                      </div>
-                                      <p className="text-gray-700 text-sm">{message.text}</p>
-                                    </div>
-                                  ))
-                                ) : (
-                                  <p className="text-gray-600 text-sm line-clamp-3">
-                                    {conversation.transcript || 'No transcript available'}
-                                  </p>
-                                );
-                              })()}
-                            </div>
-                          ) : (
-                            <p className="text-gray-600 text-sm line-clamp-3">
-                              {conversation.transcript || 'No transcript available'}
-                            </p>
-                          )}
-
-                          {conversation.summary && (
-                            <div className="bg-blue-50 mt-3 p-3 border-blue-400 border-l-4 rounded">
-                              <p className="mb-1 font-medium text-blue-800 text-sm">Summary:</p>
-                              <p className="text-blue-700 text-sm">{conversation.summary}</p>
-                            </div>
-                          )}
+                          
+                          <p className="text-gray-600 text-sm">
+                            Click to view full conversation details
+                          </p>
+                        </div>
+                        <div className="flex-shrink-0 ml-3">
+                          <Eye className="w-4 h-4 text-gray-400" />
                         </div>
                       </div>
                     </div>
@@ -624,6 +592,177 @@ export default function RepPortal() {
           </div>
         )}
       </main>
+
+      {/* Conversation Detail Modal */}
+      {selectedConversation && (
+        <div className="z-50 fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
+          <div className="bg-white shadow-2xl rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-4 sm:px-6 py-3 sm:py-4 text-white">
+              <div className="flex justify-between items-center">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-lg sm:text-xl truncate">
+                    Conversation Details
+                  </h3>
+                  <p className="mt-1 text-green-100 text-xs sm:text-sm truncate">
+                    {formatDuration(selectedConversation.duration)} • {new Date(selectedConversation.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedConversation(null)}
+                  className="flex-shrink-0 hover:bg-white hover:bg-opacity-20 ml-2 p-1 sm:p-2 rounded-full text-white hover:text-green-100 transition-colors"
+                >
+                  <svg className="w-5 sm:w-6 h-5 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-4 sm:p-6 max-h-[calc(90vh-120px)] overflow-y-auto">
+              {/* Stats Cards */}
+              <div className="gap-3 sm:gap-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-4 sm:mb-6">
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-3 sm:p-4 border border-green-200 rounded-xl">
+                  <div className="flex items-center">
+                    <div className="bg-green-500 mr-2 sm:mr-3 p-1.5 sm:p-2 rounded-lg">
+                      <svg className="w-4 sm:w-5 h-4 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-medium text-green-600 text-xs sm:text-sm">Duration</p>
+                      <p className="font-bold text-green-900 text-base sm:text-lg">{formatDuration(selectedConversation.duration)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedConversation.grade && (
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 sm:p-4 border border-blue-200 rounded-xl">
+                    <div className="flex items-center">
+                      <div className="bg-blue-500 mr-2 sm:mr-3 p-1.5 sm:p-2 rounded-lg">
+                        <svg className="w-4 sm:w-5 h-4 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-medium text-blue-600 text-xs sm:text-sm">Grade</p>
+                        <p className={`text-base sm:text-lg font-bold ${
+                          selectedConversation.grade === 'A' ? 'text-green-900' :
+                          selectedConversation.grade === 'B' ? 'text-blue-900' :
+                          selectedConversation.grade === 'C' ? 'text-yellow-900' :
+                          selectedConversation.grade === 'D' ? 'text-orange-900' :
+                          'text-red-900'
+                        }`}>
+                          {selectedConversation.grade}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="sm:col-span-2 lg:col-span-1 bg-gradient-to-r from-purple-50 to-pink-50 p-3 sm:p-4 border border-purple-200 rounded-xl">
+                  <div className="flex items-center">
+                    <div className="bg-purple-500 mr-2 sm:mr-3 p-1.5 sm:p-2 rounded-lg">
+                      <svg className="w-4 sm:w-5 h-4 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-medium text-purple-600 text-xs sm:text-sm">Date</p>
+                      <p className="font-bold text-purple-900 text-base sm:text-lg">
+                        {new Date(selectedConversation.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Summary Section */}
+              {selectedConversation.summary && (
+                <div className="mb-4 sm:mb-6">
+                  <div className="flex items-center mb-2 sm:mb-3">
+                    <div className="bg-gradient-to-r from-amber-500 to-orange-500 mr-2 sm:mr-3 p-1.5 sm:p-2 rounded-lg">
+                      <svg className="w-4 sm:w-5 h-4 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <h4 className="font-semibold text-gray-900 text-base sm:text-lg">AI Analysis Summary</h4>
+                  </div>
+                  <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-3 sm:p-4 border border-amber-200 rounded-xl">
+                    <p className="text-gray-800 text-sm sm:text-base leading-relaxed">
+                      {selectedConversation.summary}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Transcript Section */}
+              <div>
+                <div className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-2 mb-2 sm:mb-3">
+                  <div className="flex items-center">
+                    <div className="bg-gradient-to-r from-indigo-500 to-purple-500 mr-2 sm:mr-3 p-1.5 sm:p-2 rounded-lg">
+                      <svg className="w-4 sm:w-5 h-4 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                    </div>
+                    <h4 className="font-semibold text-gray-900 text-base sm:text-lg">Full Conversation Transcript</h4>
+                  </div>
+                </div>
+                
+                <div className="bg-gray-50 border border-gray-200 rounded-xl overflow-hidden">
+                  {/* Transcript Content */}
+                  <div className="max-h-64 sm:max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                    <div className="p-3 sm:p-4">
+                      <div className="space-y-3">
+                        {selectedConversation.mergedTranscript ? (
+                          // Use merged transcript with speaker identification
+                          (selectedConversation.mergedTranscript as any[]).map((message: any, index: number) => {
+                            const isUser = message.role === 'user';
+                            return (
+                              <div key={index} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-xs sm:max-w-sm lg:max-w-md px-3 py-2 rounded-2xl ${isUser
+                                  ? 'bg-green-500 text-white rounded-br-md' 
+                                  : 'bg-gray-200 text-gray-800 rounded-bl-md'
+                                }`}>
+                                  <div className="flex items-center space-x-2 mb-1">
+                                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${isUser
+                                      ? 'bg-green-400 bg-opacity-30 text-white' 
+                                      : 'bg-gray-300 text-gray-700'
+                                    }`}>
+                                      {isUser ? 'Me' : 'AI'}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm leading-relaxed">{message.text}</p>
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          // Fallback to original transcript
+                          <div className="bg-gray-100 p-3 rounded-lg">
+                            <p className="text-gray-600 text-sm">
+                              {selectedConversation.transcript || 'No transcript available'}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Transcript Footer */}
+                  <div className="bg-gray-100 px-3 sm:px-4 py-2 border-gray-200 border-t">
+                    <div className="flex justify-between items-center text-gray-500 text-xs">
+                      <span>End of conversation</span>
+                      <span>Duration: {formatDuration(selectedConversation.duration)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Analyzing Overlay */}
       {isAnalyzing && (

@@ -513,7 +513,10 @@ export default function ConversationsPage() {
                     <h4 className="font-semibold text-gray-900 text-base sm:text-lg">Full Conversation Transcript</h4>
                   </div>
                   <div className="text-gray-500 text-xs sm:text-sm">
-                    {selectedConversation.transcript.split('\n').length} lines
+                    {selectedConversation.mergedTranscript ? 
+                      `${selectedConversation.mergedTranscript.length} messages` : 
+                      `${selectedConversation.transcript.split('\n').length} lines`
+                    }
                   </div>
                 </div>
                 
@@ -545,40 +548,32 @@ export default function ConversationsPage() {
                   {/* Transcript Content */}
                   <div className="max-h-64 sm:max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                     <div className="p-3 sm:p-4">
-                      <div className="space-y-2 sm:space-y-3">
+                      <div className="space-y-3">
                         {selectedConversation.mergedTranscript ? (
-                          // Use merged transcript with speaker identification
-                          selectedConversation.mergedTranscript.map((message, index) => {
-                            const isUser = message.role === 'user'
-                            const isAssistant = message.role === 'assistant'
-                            const hasSearchMatch = transcriptSearch && message.text.toLowerCase().includes(transcriptSearch.toLowerCase())
-                            
-                            return (
-                              <div key={index} className={`p-2 sm:p-3 rounded-lg transition-all duration-200 ${
-                                hasSearchMatch 
-                                  ? 'bg-yellow-50 border-l-4 border-yellow-400 shadow-sm' 
-                                  : isUser 
-                                  ? 'bg-blue-50 border-l-4 border-blue-400' 
-                                  : isAssistant 
-                                  ? 'bg-gray-50 border-l-4 border-gray-400' 
-                                  : 'bg-white'
-                              }`}>
-                                <div className={`text-xs sm:text-sm leading-relaxed ${
-                                  isUser 
-                                    ? 'text-blue-900 font-medium' 
-                                    : isAssistant 
-                                    ? 'text-gray-900 font-medium' 
-                                    : 'text-gray-700'
-                                }`}>
-                                  <div className="flex items-start space-x-2">
-                                    <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-                                      isUser 
-                                        ? 'bg-blue-500 text-white' 
-                                        : 'bg-gray-500 text-white'
-                                    }`}>
-                                      {isUser ? 'Me' : 'AI'}
+                          // Use merged transcript with speaker identification and chat bubbles
+                          selectedConversation.mergedTranscript.length > 0 ? (
+                            selectedConversation.mergedTranscript.map((message, index) => {
+                              const isUser = message.role === 'user'
+                              const isAssistant = message.role === 'assistant'
+                              const hasSearchMatch = transcriptSearch && message.text.toLowerCase().includes(transcriptSearch.toLowerCase())
+                              
+                              return (
+                                <div key={index} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+                                  <div className={`max-w-xs sm:max-w-sm lg:max-w-md px-3 py-2 rounded-2xl ${
+                                    isUser 
+                                      ? 'bg-blue-500 text-white rounded-br-md' 
+                                      : 'bg-gray-200 text-gray-800 rounded-bl-md'
+                                  } ${hasSearchMatch ? 'ring-2 ring-yellow-400 ring-opacity-75' : ''}`}>
+                                    <div className="flex items-center space-x-2 mb-1">
+                                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                                        isUser 
+                                          ? 'bg-blue-400 bg-opacity-30 text-white' 
+                                          : 'bg-gray-300 text-gray-700'
+                                      }`}>
+                                        {isUser ? 'Me' : 'AI'}
+                                      </span>
                                     </div>
-                                    <div className="flex-1">
+                                    <p className="text-sm leading-relaxed">
                                       {transcriptSearch ? (
                                         <span dangerouslySetInnerHTML={{ 
                                           __html: highlightText(message.text || '\u00A0', transcriptSearch) 
@@ -586,47 +581,63 @@ export default function ConversationsPage() {
                                       ) : (
                                         message.text || '\u00A0'
                                       )}
-                                    </div>
+                                    </p>
                                   </div>
                                 </div>
-                              </div>
-                            )
-                          })
+                              )
+                            })
+                          ) : (
+                            // Show transcript text when mergedTranscript is empty array
+                            <div className="bg-gray-100 p-3 rounded-lg">
+                              <p className="text-gray-600 text-sm">
+                                {transcriptSearch ? (
+                                  <span dangerouslySetInnerHTML={{ 
+                                    __html: highlightText(selectedConversation.transcript || 'No transcript available', transcriptSearch) 
+                                  }} />
+                                ) : (
+                                  selectedConversation.transcript || 'No transcript available'
+                                )}
+                              </p>
+                            </div>
+                          )
                         ) : (
-                          // Fallback to original transcript parsing
+                          // Fallback to original transcript with chat bubble style
                           selectedConversation.transcript.split('\n').map((line, index) => {
                             const isUser = line.toLowerCase().includes('user:') || line.toLowerCase().includes('rep:')
                             const isAssistant = line.toLowerCase().includes('assistant:') || line.toLowerCase().includes('customer:')
                             const hasSearchMatch = transcriptSearch && line.toLowerCase().includes(transcriptSearch.toLowerCase())
                             
+                            if (!line.trim()) return null
+                            
                             return (
-                              <div key={index} className={`p-2 sm:p-3 rounded-lg transition-all duration-200 ${
-                                hasSearchMatch 
-                                  ? 'bg-yellow-50 border-l-4 border-yellow-400 shadow-sm' 
-                                  : isUser 
-                                  ? 'bg-blue-50 border-l-4 border-blue-400' 
-                                  : isAssistant 
-                                  ? 'bg-gray-50 border-l-4 border-gray-400' 
-                                  : 'bg-white'
-                              }`}>
-                                <div className={`text-xs sm:text-sm leading-relaxed ${
+                              <div key={index} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-xs sm:max-w-sm lg:max-w-md px-3 py-2 rounded-2xl ${
                                   isUser 
-                                    ? 'text-blue-900 font-medium' 
-                                    : isAssistant 
-                                    ? 'text-gray-900 font-medium' 
-                                    : 'text-gray-700'
-                                }`}>
-                                  {transcriptSearch ? (
-                                    <span dangerouslySetInnerHTML={{ 
-                                      __html: highlightText(line || '\u00A0', transcriptSearch) 
-                                    }} />
-                                  ) : (
-                                    line || '\u00A0'
-                                  )}
+                                    ? 'bg-blue-500 text-white rounded-br-md' 
+                                    : 'bg-gray-200 text-gray-800 rounded-bl-md'
+                                } ${hasSearchMatch ? 'ring-2 ring-yellow-400 ring-opacity-75' : ''}`}>
+                                  <div className="flex items-center space-x-2 mb-1">
+                                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                                      isUser 
+                                        ? 'bg-blue-400 bg-opacity-30 text-white' 
+                                        : 'bg-gray-300 text-gray-700'
+                                    }`}>
+                                      {isUser ? 'Me' : 'AI'}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm leading-relaxed">
+                                    {transcriptSearch ? (
+                                      <span dangerouslySetInnerHTML={{ 
+                                        __html: highlightText(line || '\u00A0', transcriptSearch) 
+                                      }} />
+                                    ) : (
+                                      line || '\u00A0'
+                                    )}
+                                  </p>
                                 </div>
                               </div>
                             )
-                          })
+                          }).filter(Boolean)
                         )}
                       </div>
                     </div>
