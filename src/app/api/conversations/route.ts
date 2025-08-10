@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
+import { syncUsageDataToGoogleSheets } from '@/lib/sync-utils'
 
 const prisma = new PrismaClient()
 
@@ -29,6 +30,14 @@ export async function POST(request: NextRequest) {
         },
       },
     })
+
+    // Automatically sync usage data to Google Sheets after conversation creation
+    try {
+      await syncUsageDataToGoogleSheets()
+    } catch (error) {
+      console.warn('Failed to auto-sync to Google Sheets after conversation creation:', error)
+      // Don't fail the conversation creation if syncing fails
+    }
 
     return NextResponse.json(conversation)
   } catch (error) {

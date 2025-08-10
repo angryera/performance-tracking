@@ -58,6 +58,8 @@ export default function ManagerDashboard() {
   const [error, setError] = useState<string>('')
   const [isImporting, setIsImporting] = useState(false)
   const [importStatus, setImportStatus] = useState<string>('')
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [syncStatus, setSyncStatus] = useState<string>('')
   const [hasAdmin, setHasAdmin] = useState<boolean | null>(null)
   const [isSettingUp, setIsSettingUp] = useState(false)
   const [setupCredentials, setSetupCredentials] = useState<{email: string, password: string} | null>(null)
@@ -381,6 +383,30 @@ export default function ManagerDashboard() {
     }
   }
 
+  const handleSyncData = async () => {
+    setIsSyncing(true)
+    setSyncStatus('Syncing data to Google Sheets...')
+    
+    try {
+      const response = await fetch('/api/manager/sync-sheet', {
+        method: 'POST',
+      })
+      
+      if (response.ok) {
+        setSyncStatus('Data synced successfully!')
+        // Refresh stats after sync
+        fetchStats()
+        fetchRecentActivities()
+      } else {
+        setSyncStatus('Failed to sync data. Please try again.')
+      }
+    } catch (error) {
+      setSyncStatus('Network error. Please try again.')
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
@@ -391,27 +417,48 @@ export default function ManagerDashboard() {
         </div>
       </div>
 
-      {/* Import Section */}
+      {/* Import & Sync Section */}
       <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
         <div className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-4">
           <div>
-            <h3 className="font-semibold text-gray-900 text-base sm:text-lg">Import Data</h3>
-            <p className="mt-1 text-gray-600 text-sm">Import sales representatives from Google Sheets</p>
+            <h3 className="font-semibold text-gray-900 text-base sm:text-lg">Data Management</h3>
+            <p className="mt-1 text-gray-600 text-sm">Import from and sync to Google Sheets</p>
           </div>
-          <button
-            onClick={handleImportData}
-            disabled={isImporting}
-            className="flex items-center bg-blue-600 hover:bg-blue-700 disabled:opacity-50 px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium text-white text-sm transition-colors"
-          >
-            <Download className="mr-2 w-4 h-4" />
-            {isImporting ? 'Importing...' : 'Import Data'}
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={handleImportData}
+              disabled={isImporting}
+              className="flex items-center bg-blue-600 hover:bg-blue-700 disabled:opacity-50 px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium text-white text-sm transition-colors"
+            >
+              <Download className="mr-2 w-4 h-4" />
+              {isImporting ? 'Importing...' : 'Import Data'}
+            </button>
+            <button
+              onClick={handleSyncData}
+              disabled={isSyncing}
+              className="flex items-center bg-green-600 hover:bg-green-700 disabled:opacity-50 px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium text-white text-sm transition-colors"
+            >
+              <BarChart3 className="mr-2 w-4 h-4" />
+              {isSyncing ? 'Syncing...' : 'Sync to Sheet'}
+            </button>
+          </div>
         </div>
-        {importStatus && (
-          <div className="mt-3 sm:mt-4 p-3 border rounded-lg text-sm">
-            <span className={importStatus.includes('successfully') ? 'text-green-600' : 'text-red-600'}>
-              {importStatus}
-            </span>
+        {(importStatus || syncStatus) && (
+          <div className="space-y-2 mt-3 sm:mt-4">
+            {importStatus && (
+              <div className="p-3 border rounded-lg text-sm">
+                <span className={importStatus.includes('successfully') ? 'text-green-600' : 'text-red-600'}>
+                  {importStatus}
+                </span>
+              </div>
+            )}
+            {syncStatus && (
+              <div className="p-3 border rounded-lg text-sm">
+                <span className={syncStatus.includes('successfully') ? 'text-green-600' : 'text-red-600'}>
+                  {syncStatus}
+                </span>
+              </div>
+            )}
           </div>
         )}
       </div>

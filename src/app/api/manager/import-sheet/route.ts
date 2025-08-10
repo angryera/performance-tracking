@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { GoogleSheetsService } from '@/lib/google-sheets'
+import { syncUsageDataToGoogleSheets } from '@/lib/sync-utils'
 import bcrypt from 'bcryptjs'
 
 export async function POST(request: NextRequest) {
@@ -51,7 +52,10 @@ export async function POST(request: NextRequest) {
             firstName: row.First_Name,
             lastName: row.Last_Name,
             role: row.Role as 'ADMIN' | 'REP',
-            minutes: parseInt(row.Minutes) || 0,
+            // Only update minutes if they are available and greater than 0
+            ...(row.Minutes && parseInt(row.Minutes) > 0 && {
+              minutes: parseInt(row.Minutes)
+            }),
             // Only update password if it's different
             ...(row.Password !== existingUser.password && {
               password: await bcrypt.hash(row.Password, 10)
@@ -73,8 +77,29 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Clear minutes fields in Google Sheets after successful import
+    try {
+      await googleSheetsService.clearMinutesFields(
+        config.spreadsheetId,
+        config.range
+      )
+      console.log('Successfully cleared minutes fields in Google Sheets')
+    } catch (error) {
+      console.warn('Failed to clear minutes fields in Google Sheets:', error)
+      // Don't fail the entire import if clearing fails
+    }
+
+    // Sync current usage data back to Google Sheets
+    try {
+      await syncUsageDataToGoogleSheets()
+      console.log('Successfully synced usage data to Google Sheets')
+    } catch (error) {
+      console.warn('Failed to sync usage data to Google Sheets:', error)
+      // Don't fail the entire import if syncing fails
+    }
+
     return NextResponse.json(
-      { message: `Successfully imported ${sheetData.users.length} users from Google Sheets with ${sheetData.grantedMinutes} granted minutes` },
+      { message: `Successfully imported ${sheetData.users.length} users from Google Sheets with ${sheetData.grantedMinutes} granted minutes. Minutes fields cleared and usage data synced.` },
       { status: 200 }
     )
 
