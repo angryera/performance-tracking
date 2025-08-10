@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Phone, User, Lock, AlertCircle, BarChart3, MessageSquare, TrendingUp, LogOut, Eye, EyeOff } from 'lucide-react'
+import { Phone, User, Lock, AlertCircle, BarChart3, MessageSquare, TrendingUp, LogOut, Eye, EyeOff, CheckCircle } from 'lucide-react'
 import { Poppins, Quicksand } from 'next/font/google'
 import VAPIWidget from '@/components/VAPIWidget'
 import ClientOnly from '@/components/ClientOnly'
@@ -55,6 +55,9 @@ export default function RepPortal() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'management'>('dashboard')
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [isLoadingConversations, setIsLoadingConversations] = useState(false)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
   const [loginData, setLoginData] = useState({
     email: '',
     password: ''
@@ -188,40 +191,7 @@ export default function RepPortal() {
     }
   }
 
-  const onCallEnd = async (duration: number, transcript: string, mergedTranscript: Array<{ role: string, text: string }>) => {
-    if (!currentUser) return
 
-    console.log('🔍 Rep Page - onCallEnd received:')
-    console.log('  - Duration:', duration)
-    console.log('  - Transcript:', transcript)
-    console.log('  - MergedTranscript:', mergedTranscript)
-    console.log('  - MergedTranscript type:', typeof mergedTranscript)
-    console.log('  - MergedTranscript length:', mergedTranscript?.length)
-
-    try {
-      const response = await fetch('/api/conversations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: currentUser.id,
-          transcript,
-          mergedTranscript,
-          duration,
-        }),
-      })
-
-      if (response.ok) {
-        // Refresh conversations for all users (both admin and regular reps)
-        fetchConversations()
-        // Refresh user usage
-        fetchUserUsage(currentUser.id)
-      }
-    } catch (error) {
-      console.error('Error saving conversation:', error)
-    }
-  }
 
   if (!isLoggedIn) {
     return (
@@ -461,11 +431,116 @@ export default function RepPortal() {
               </div>
             )}
 
+            {/* Status Messages */}
+            {isAnalyzing && (
+              <div className="bg-blue-50 p-4 border border-blue-200 rounded-lg">
+                <div className="flex items-center">
+                  <div className="mx-auto border-b-2 border-blue-600 rounded-full w-6 h-6 animate-spin"></div>
+                  <span className="ml-3 font-medium text-blue-800 text-sm">Analyzing transcript with AI...</span>
+                </div>
+              </div>
+            )}
+
+            {isSaving && (
+              <div className="bg-yellow-50 p-4 border border-yellow-200 rounded-lg">
+                <div className="flex items-center">
+                  <div className="mx-auto border-yellow-600 border-b-2 rounded-full w-6 h-6 animate-spin"></div>
+                  <span className="ml-3 font-medium text-yellow-800 text-sm">Saving conversation...</span>
+                </div>
+              </div>
+            )}
+
+            {showSuccess && (
+              <div className="bg-green-50 p-4 border border-green-200 rounded-lg">
+                <div className="flex items-center">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <span className="ml-3 font-medium text-green-800 text-sm">Conversation saved successfully!</span>
+                </div>
+              </div>
+            )}
+
             {/* VAPI Widget */}
             <ClientOnly>
               <VAPIWidget
-                onCallEnd={onCallEnd}
+                userId={currentUser?.id}
                 remainingSeconds={userUsage?.remainingSeconds || 0}
+                onTranscriptUpdate={(transcript) => {
+                  console.log('Transcript updated:', transcript)
+                }}
+                onTimeLimitReached={() => {
+                  console.log('Time limit reached, refreshing usage data...')
+                  if (currentUser?.id) {
+                    fetchUserUsage(currentUser.id)
+                  }
+                }}
+                onCallEnd={async (duration, transcript, mergedTranscript) => {
+                  console.log('Call ended:', { duration, transcript, mergedTranscript })
+
+                  // Analyze transcript with AI first
+                  let grade = null
+                  let summary = null
+
+                  setIsAnalyzing(true)
+                  try {
+                    const analysisResponse = await fetch('/api/analyze-transcript', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({ transcript }),
+                    })
+
+                    if (analysisResponse.ok) {
+                      const analysis = await analysisResponse.json()
+                      grade = analysis.grade
+                      summary = analysis.summary
+                      console.log('AI analysis completed:', analysis)
+                    } else {
+                      console.error('Failed to analyze transcript')
+                    }
+                  } catch (error) {
+                    console.error('Error analyzing transcript:', error)
+                  } finally {
+                    setIsAnalyzing(false)
+                  }
+
+                  // Save conversation to database with AI analysis, accurate duration, and merged transcript
+                  setIsSaving(true)
+                  try {
+                    const response = await fetch('/api/conversations', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        userId: currentUser?.id,
+                        transcript,
+                        mergedTranscript, // Add the merged transcript with speaker identification
+                        duration, // Now using accurate duration from timestamps
+                        grade,
+                        summary
+                      }),
+                    })
+
+                    if (response.ok) {
+                      console.log('Conversation saved successfully with AI analysis, accurate duration, and merged transcript:', duration)
+                      // Refresh conversations for all users (both admin and regular reps)
+                      fetchConversations()
+                    } else {
+                      console.error('Failed to save conversation')
+                    }
+                  } catch (error) {
+                    console.error('Error saving conversation:', error)
+                  } finally {
+                    setIsSaving(false)
+                    setShowSuccess(true)
+                    setTimeout(() => setShowSuccess(false), 3000) // Hide after 3 seconds
+                    // Refresh user usage data
+                    if (currentUser?.id) {
+                      fetchUserUsage(currentUser.id)
+                    }
+                  }
+                }}
               />
             </ClientOnly>
           </div>
