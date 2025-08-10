@@ -431,33 +431,7 @@ export default function RepPortal() {
               </div>
             )}
 
-            {/* Status Messages */}
-            {isAnalyzing && (
-              <div className="bg-blue-50 p-4 border border-blue-200 rounded-lg">
-                <div className="flex items-center">
-                  <div className="mx-auto border-b-2 border-blue-600 rounded-full w-6 h-6 animate-spin"></div>
-                  <span className="ml-3 font-medium text-blue-800 text-sm">Analyzing transcript with AI...</span>
-                </div>
-              </div>
-            )}
 
-            {isSaving && (
-              <div className="bg-yellow-50 p-4 border border-yellow-200 rounded-lg">
-                <div className="flex items-center">
-                  <div className="mx-auto border-yellow-600 border-b-2 rounded-full w-6 h-6 animate-spin"></div>
-                  <span className="ml-3 font-medium text-yellow-800 text-sm">Saving conversation...</span>
-                </div>
-              </div>
-            )}
-
-            {showSuccess && (
-              <div className="bg-green-50 p-4 border border-green-200 rounded-lg">
-                <div className="flex items-center">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span className="ml-3 font-medium text-green-800 text-sm">Conversation saved successfully!</span>
-                </div>
-              </div>
-            )}
 
             {/* VAPI Widget */}
             <ClientOnly>
@@ -650,6 +624,97 @@ export default function RepPortal() {
           </div>
         )}
       </main>
+
+      {/* Analyzing Overlay */}
+      {isAnalyzing && (
+        <div className="z-50 fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 backdrop-blur-sm !mt-0 p-4">
+          <div className="bg-white shadow-2xl p-6 sm:p-8 border border-gray-200 rounded-2xl w-full max-w-sm sm:max-w-md text-center">
+            <div className="mx-auto mb-4 sm:mb-6 border-purple-400 border-b-2 rounded-full w-12 sm:w-16 h-12 sm:h-16 animate-spin"></div>
+            <h3 className={`${quicksand.className} font-bold text-purple-600 text-xl sm:text-2xl mb-2 sm:mb-3`}>
+              Analyzing Performance
+            </h3>
+            <p className={`${poppins.className} text-gray-600 text-base sm:text-lg mb-4 sm:mb-6`}>
+              AI is evaluating your conversation and generating insights...
+            </p>
+            <div className="space-y-2 sm:space-y-3 text-left">
+              <div className="flex items-center text-gray-500 text-xs sm:text-sm">
+                <div className="flex-shrink-0 bg-purple-400 mr-2 sm:mr-3 rounded-full w-1.5 sm:w-2 h-1.5 sm:h-2"></div>
+                <span>Processing conversation transcript</span>
+              </div>
+              <div className="flex items-center text-gray-500 text-xs sm:text-sm">
+                <div className="flex-shrink-0 bg-purple-400 mr-2 sm:mr-3 rounded-full w-1.5 sm:w-2 h-1.5 sm:h-2"></div>
+                <span>Evaluating sales techniques</span>
+              </div>
+              <div className="flex items-center text-gray-500 text-xs sm:text-sm">
+                <div className="flex-shrink-0 bg-purple-400 mr-2 sm:mr-3 rounded-full w-1.5 sm:w-2 h-1.5 sm:h-2"></div>
+                <span>Generating performance grade</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Saving Overlay */}
+      {isSaving && (
+        <div className="z-50 fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 backdrop-blur-sm !mt-0 p-4">
+          <div className="bg-white shadow-2xl p-6 sm:p-8 border border-gray-200 rounded-2xl w-full max-w-sm sm:max-w-md text-center">
+            <div className="mx-auto mb-4 sm:mb-6 border-b-2 border-blue-400 rounded-full w-12 sm:w-16 h-12 sm:h-16 animate-spin"></div>
+            <h3 className={`${quicksand.className} font-bold text-blue-600 text-xl sm:text-2xl mb-2 sm:mb-3`}>
+              Saving Conversation
+            </h3>
+            <p className={`${poppins.className} text-gray-600 text-base sm:text-lg mb-4 sm:mb-6`}>
+              Storing your session data and updating your usage...
+            </p>
+            <div className="space-y-2 sm:space-y-3 text-left">
+              <div className="flex items-center text-gray-500 text-xs sm:text-sm">
+                <div className="flex-shrink-0 bg-blue-400 mr-2 sm:mr-3 rounded-full w-1.5 sm:w-2 h-1.5 sm:h-2"></div>
+                <span>Saving conversation transcript</span>
+              </div>
+              <div className="flex items-center text-gray-500 text-xs sm:text-sm">
+                <div className="flex-shrink-0 bg-blue-400 mr-2 sm:mr-3 rounded-full w-1.5 sm:w-2 h-1.5 sm:h-2"></div>
+                <span>Storing performance analysis</span>
+              </div>
+              <div className="flex items-center text-gray-500 text-xs sm:text-sm">
+                <div className="flex-shrink-0 bg-blue-400 mr-2 sm:mr-3 rounded-full w-1.5 sm:w-2 h-1.5 sm:h-2"></div>
+                <span>Updating usage statistics</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Message Overlay */}
+      {showSuccess && (
+        <div className="z-50 fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 backdrop-blur-sm !mt-0 p-4">
+          <div className="bg-white shadow-2xl p-6 sm:p-8 border border-gray-200 rounded-2xl w-full max-w-sm sm:max-w-md text-center">
+            <div className="flex justify-center items-center bg-green-100 mx-auto mb-4 sm:mb-6 rounded-full w-12 sm:w-16 h-12 sm:h-16">
+              <svg className="w-6 sm:w-8 h-6 sm:h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className={`${quicksand.className} font-bold text-green-800 text-xl sm:text-2xl mb-2 sm:mb-3`}>
+              Session Complete!
+            </h3>
+            <p className={`${poppins.className} text-green-700 text-base sm:text-lg`}>
+              Your conversation has been analyzed and saved successfully.
+            </p>
+            <div className="space-y-1 sm:space-y-2 mt-4 sm:mt-6 text-left">
+              <div className="flex items-center text-gray-600 text-xs sm:text-sm">
+                <div className="flex-shrink-0 bg-green-400 mr-2 sm:mr-3 rounded-full w-1.5 sm:w-2 h-1.5 sm:h-2"></div>
+                <span>Performance analysis completed</span>
+              </div>
+              <div className="flex items-center text-gray-600 text-xs sm:text-sm">
+                <div className="flex-shrink-0 bg-green-400 mr-2 sm:mr-3 rounded-full w-1.5 sm:w-2 h-1.5 sm:h-2"></div>
+                <span>Conversation saved to database</span>
+              </div>
+              <div className="flex items-center text-gray-600 text-xs sm:text-sm">
+                <div className="flex-shrink-0 bg-green-400 mr-2 sm:mr-3 rounded-full w-1.5 sm:w-2 h-1.5 sm:h-2"></div>
+                <span>Usage statistics updated</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 } 
