@@ -42,6 +42,7 @@ export default function VAPIWidget({
   const timeLimitReachedRef = useRef<boolean>(false)
   const audioContextRef = useRef<AudioContext | null>(null)
   const audioStreamRef = useRef<MediaStream | null>(null)
+  const currentCallRef = useRef<any>(null) // Store reference to VAPI call object
 
   // Anam video assistant states
   const [showAnamChat, setShowAnamChat] = useState(false)
@@ -78,15 +79,15 @@ export default function VAPIWidget({
 
   // Check if VAPI supports mute/unmute methods
   const vapiSupportsAudioControl = () => {
-    const hasMute = vapi && typeof vapi.mute === 'function'
-    const hasUnmute = vapi && typeof vapi.unmute === 'function'
+    if (!vapi) return false
     
-    console.log('VAPI audio control support check:', {
-      hasVapi: !!vapi,
-      hasMute,
-      hasUnmute,
-      vapiMethods: vapi ? Object.getOwnPropertyNames(vapi) : []
-    })
+    // Check for both mute and unmute methods on instance and prototype
+    const hasMute = typeof vapi.setMuted === 'function' || 
+                   typeof vapi.mute === 'function' ||
+                   typeof Object.getPrototypeOf(vapi)?.setMuted === 'function'
+    const hasUnmute = typeof vapi.setMuted === 'function' || 
+                      typeof vapi.unmute === 'function' ||
+                      typeof Object.getPrototypeOf(vapi)?.setMuted === 'function'
     
     return hasMute && hasUnmute
   }
@@ -97,72 +98,95 @@ export default function VAPIWidget({
     
     setIsMuteProcessing(true)
     try {
-      if (activeModeRef.current === 'sell') {
+      const currentMode = activeModeRef.current
+      
+      if (currentMode === 'sell') {
         // For Anam video calls, use local audio stream control
-        if (!audioStreamRef.current) {
-          console.log('No audio stream available, attempting to get user media...')
-          await getUserMedia()
-          
-          if (!audioStreamRef.current) {
-            showErrorToast('Cannot access microphone. Please check permissions and try again.')
-            return
-          }
-        }
-
-        if (!isMuted) {
-          // Mute: Disable all audio tracks
-          audioStreamRef.current.getTracks().forEach(track => {
-            track.enabled = false
-          })
-          setIsMuted(true)
-          console.log('Microphone muted (Anam mode)')
-        } else {
-          // Unmute: Enable all audio tracks
-          audioStreamRef.current.getTracks().forEach(track => {
-            track.enabled = true
-          })
-          setIsMuted(false)
-          console.log('Microphone unmuted (Anam mode)')
-        }
+        await handleAnamMute(!isMuted)
       } else {
-        // For VAPI calls, use VAPI's audio control methods if available
-        if (!vapi) {
-          showErrorToast('VAPI not initialized. Please try again.')
-          return
-        }
-
-        if (vapiSupportsAudioControl()) {
-          // Use VAPI's built-in audio control methods
-          if (!isMuted) {
-            try {
-              await vapi.mute()
-              setIsMuted(true)
-              console.log('Microphone muted (VAPI mode)')
-            } catch (vapiError) {
-              console.warn('VAPI mute failed, falling back to local stream control:', vapiError)
-              await fallbackMuteControl(true)
-            }
-          } else {
-            try {
-              await vapi.unmute()
-              setIsMuted(false)
-              console.log('Microphone unmuted (VAPI mode)')
-            } catch (vapiError) {
-              console.warn('VAPI unmute failed, falling back to local stream control:', vapiError)
-              await fallbackMuteControl(false)
-            }
-          }
-        } else {
-          // VAPI doesn't support audio control, use fallback
-          console.log('VAPI audio control not supported, using fallback method')
-          await fallbackMuteControl(!isMuted)
-        }
+        // For VAPI calls, try VAPI methods first, then fallback
+        await handleVAPIMute(!isMuted)
       }
     } catch (error) {
       console.error('Error toggling mute:', error)
       showErrorToast('Failed to toggle mute. Please try again.')
     } finally {
       setIsMuteProcessing(false)
+    }
+  }
+
+  // Handle mute for Anam video calls
+  const handleAnamMute = async (mute: boolean) => {
+    try {
+      if (!audioStreamRef.current) {
+        await getUserMedia()
+        
+        if (!audioStreamRef.current) {
+          throw new Error('Cannot access microphone for Anam mode')
+        }
+      }
+  
+      // Enable/disable all audio tracks
+      audioStreamRef.current.getTracks().forEach(track => {
+        if (track.kind === 'audio') {
+          track.enabled = !mute
+        }
+      })
+      
+      setIsMuted(mute)
+    } catch (error) {
+      console.error('Anam mute control failed:', error)
+      throw error
+    }
+  }
+
+  // Handle mute for VAPI calls
+  const handleVAPIMute = async (mute: boolean) => {
+    if (!vapi) {
+      throw new Error('VAPI not initialized')
+    }
+
+    // For VAPI calls, we should use the call object's mute functionality
+    // The call object has isMuted and setMuted methods
+    try {
+      // First try: use VAPI instance setMuted method (on prototype)
+      if (typeof vapi.setMuted === 'function') {
+        await vapi.setMuted(mute)
+        setIsMuted(mute)
+        return
+      }
+      
+      // Second try: use the stored call object reference
+      const currentCall = currentCallRef.current
+      
+      if (currentCall && typeof currentCall.setMuted === 'function') {
+        await currentCall.setMuted(mute)
+        setIsMuted(mute)
+        return
+      }
+      
+      // Third try: try VAPI instance methods if call object doesn't have setMuted
+      if (vapiSupportsAudioControl()) {
+        try {
+          if (mute) {
+            await vapi.mute()
+          } else {
+            await vapi.unmute()
+          }
+          setIsMuted(mute)
+          return
+        } catch (vapiError) {
+          console.warn('VAPI instance audio control failed, falling back to local stream control:', vapiError)
+          // Fall through to fallback method
+        }
+      }
+
+      // Final fallback: use local audio stream control
+      await fallbackMuteControl(mute)
+    } catch (error) {
+      console.error('VAPI mute control failed:', error)
+      // Fall back to local stream control
+      await fallbackMuteControl(mute)
     }
   }
 
@@ -173,15 +197,18 @@ export default function VAPIWidget({
         await getUserMedia()
         
         if (!audioStreamRef.current) {
-          throw new Error('Cannot access microphone')
+          throw new Error('Cannot access microphone for fallback control')
         }
       }
-
+  
+      // Enable/disable all audio tracks
       audioStreamRef.current.getTracks().forEach(track => {
-        track.enabled = !mute
+        if (track.kind === 'audio') {
+          track.enabled = !mute
+        }
       })
+      
       setIsMuted(mute)
-      console.log(`Microphone ${mute ? 'muted' : 'unmuted'} (fallback mode)`)
     } catch (error) {
       console.error('Fallback mute control failed:', error)
       throw error
@@ -191,12 +218,17 @@ export default function VAPIWidget({
   // Get user media for mute functionality
   const getUserMedia = async () => {
     try {
-      // Stop existing stream if any
+      // Don't stop existing stream if it's already working
+      if (audioStreamRef.current && audioStreamRef.current.active) {
+        return audioStreamRef.current
+      }
+  
+      // Stop existing stream if it's not active
       if (audioStreamRef.current) {
         audioStreamRef.current.getTracks().forEach(track => track.stop())
         audioStreamRef.current = null
       }
-
+  
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           echoCancellation: true,
@@ -206,8 +238,16 @@ export default function VAPIWidget({
           channelCount: 1 // Mono for better speech recognition
         } 
       })
+      
       audioStreamRef.current = stream
-      console.log('Audio stream obtained for mute functionality')
+      
+      // Set initial mute state based on current state
+      if (isMuted) {
+        stream.getAudioTracks().forEach(track => {
+          track.enabled = false
+        })
+      }
+      
       return stream
     } catch (error: any) {
       console.error('Error getting user media:', error)
@@ -248,44 +288,46 @@ export default function VAPIWidget({
 
     // If it's sell mode, show Anam video assistant instead of VAPI
     if (mode === 'sell') {
-      // Get user media for Anam video calls
+      // Get user media for Anam video calls and mute functionality
       await getUserMedia()
       startAnamChat()
       return
     }
 
-    if (!vapi) return
+    // For practice mode, use VAPI
+    if (!vapi) {
+      showErrorToast('VAPI not initialized. Please refresh the page and try again.')
+      return
+    }
 
     const assistantId = config.vapi.assistants[mode as keyof typeof config.vapi.assistants]
 
     try {
-      // For VAPI calls, we don't need to get user media upfront
-      // VAPI will handle the audio stream internally
-      console.log('Starting VAPI call with assistant:', assistantId)
+      // For VAPI calls, we need to get user media for mute functionality
+      // even though VAPI handles the call audio internally
+      await getUserMedia()
       
       // Start the call and get the call ID
       const call = await vapi.start(assistantId)
-      console.log('VAPI start response:', call)
-      console.log('Call started with ID:', call?.id)
+
+      // Store the call object reference for mute functionality
+      currentCallRef.current = call
 
       // Set the call ID if available
       if (call?.id) {
         setCurrentCallId(call.id)
         currentCallIdRef.current = call.id
-        console.log('Set call ID to:', call.id)
       } else {
         // Fallback: generate a unique call ID
         const fallbackId = `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         setCurrentCallId(fallbackId)
         currentCallIdRef.current = fallbackId
-        console.log('Set fallback call ID to:', fallbackId)
       }
 
       // Set start time
       const startTime = new Date()
       setCallStartTime(startTime)
       callStartTimeRef.current = startTime
-      console.log('Set call start time to:', startTime.toISOString())
 
     } catch (error) {
       console.error('Error starting call:', error)
@@ -295,13 +337,10 @@ export default function VAPIWidget({
   }
 
   const endCall = () => {
-    console.log('Ending call, cleaning up audio streams...')
-    
     // Clean up audio stream
     if (audioStreamRef.current) {
       audioStreamRef.current.getTracks().forEach(track => {
         track.stop()
-        console.log('Stopped audio track:', track.kind)
       })
       audioStreamRef.current = null
     }
@@ -309,12 +348,14 @@ export default function VAPIWidget({
     // Reset mute state
     setIsMuted(false)
     
+    // Clear call reference
+    currentCallRef.current = null
+    
     if (activeModeRef.current === 'sell') {
       endAnamChat()
     } else if (vapi) {
       try {
         vapi.stop()
-        console.log('VAPI call stopped')
       } catch (error) {
         console.warn('Error stopping VAPI call:', error)
       }
@@ -711,7 +752,7 @@ export default function VAPIWidget({
                     ? 'bg-red-500 hover:bg-red-600 text-white' 
                     : 'bg-gray-500 hover:bg-gray-600 text-white'
                 } ${isMuteProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                title={isMuted ? 'Unmute' : 'Mute'}
+                title={`${isMuted ? 'Unmute' : 'Mute'} microphone (${activeModeRef.current || 'unknown'} mode)`}
               >
                 {isMuteProcessing ? (
                   <>
@@ -738,6 +779,40 @@ export default function VAPIWidget({
                 <Square className="mr-2 w-4 h-4" />
                 End Call
               </button>
+            </div>
+          )}
+          
+          {/* Debug Info for Mute Troubleshooting */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="bg-gray-100 mt-4 p-3 rounded-lg text-gray-600 text-xs">
+              <div className="mb-2 font-medium">Debug Info:</div>
+              <div className="gap-2 grid grid-cols-2">
+                <div>Mode: {activeModeRef.current || 'none'}</div>
+                <div>Mute State: {isMuted ? 'Muted' : 'Unmuted'}</div>
+                <div>Audio Stream: {audioStreamRef.current ? 'Active' : 'None'}</div>
+                <div>VAPI: {vapi ? 'Initialized' : 'Not initialized'}</div>
+                <div>Call Object: {currentCallRef.current ? 'Stored' : 'None'}</div>
+                <div>Call ID: {currentCallRef.current?.id || 'None'}</div>
+                {vapi && (
+                  <>
+                    <div>VAPI setMuted: {typeof vapi.setMuted}</div>
+                    <div>VAPI isMuted: {typeof vapi.isMuted}</div>
+                  </>
+                )}
+                {currentCallRef.current && (
+                  <>
+                    <div>Call isMuted: {currentCallRef.current.isMuted ? 'Yes' : 'No'}</div>
+                    <div>Call setMuted: {typeof currentCallRef.current.setMuted}</div>
+                  </>
+                )}
+                {audioStreamRef.current && (
+                  <>
+                    <div>Stream Active: {audioStreamRef.current.active ? 'Yes' : 'No'}</div>
+                    <div>Audio Tracks: {audioStreamRef.current.getAudioTracks().length}</div>
+                    <div>Track States: {audioStreamRef.current.getAudioTracks().map(t => `${t.enabled ? 'On' : 'Off'}`).join(', ')}</div>
+                  </>
+                )}
+              </div>
             </div>
           )}
         </div>
