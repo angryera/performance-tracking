@@ -29,6 +29,7 @@ export default function VAPIWidget({
   const [isMuted, setIsMuted] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
+  const [isMuteProcessing, setIsMuteProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [backendResponse, setBackendResponse] = useState<any>(null)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -75,43 +76,154 @@ export default function VAPIWidget({
     }
   }
 
+  // Check if VAPI supports mute/unmute methods
+  const vapiSupportsAudioControl = () => {
+    const hasMute = vapi && typeof vapi.mute === 'function'
+    const hasUnmute = vapi && typeof vapi.unmute === 'function'
+    
+    console.log('VAPI audio control support check:', {
+      hasVapi: !!vapi,
+      hasMute,
+      hasUnmute,
+      vapiMethods: vapi ? Object.getOwnPropertyNames(vapi) : []
+    })
+    
+    return hasMute && hasUnmute
+  }
+
   // Mute/unmute functionality
   const toggleMute = async () => {
+    if (isMuteProcessing) return // Prevent multiple simultaneous mute operations
+    
+    setIsMuteProcessing(true)
     try {
-      if (!isMuted) {
-        // Mute: Stop all audio tracks
-        if (audioStreamRef.current) {
+      if (activeModeRef.current === 'sell') {
+        // For Anam video calls, use local audio stream control
+        if (!audioStreamRef.current) {
+          console.log('No audio stream available, attempting to get user media...')
+          await getUserMedia()
+          
+          if (!audioStreamRef.current) {
+            showErrorToast('Cannot access microphone. Please check permissions and try again.')
+            return
+          }
+        }
+
+        if (!isMuted) {
+          // Mute: Disable all audio tracks
           audioStreamRef.current.getTracks().forEach(track => {
             track.enabled = false
           })
-        }
-        setIsMuted(true)
-        console.log('Microphone muted')
-      } else {
-        // Unmute: Enable all audio tracks
-        if (audioStreamRef.current) {
+          setIsMuted(true)
+          console.log('Microphone muted (Anam mode)')
+        } else {
+          // Unmute: Enable all audio tracks
           audioStreamRef.current.getTracks().forEach(track => {
             track.enabled = true
           })
+          setIsMuted(false)
+          console.log('Microphone unmuted (Anam mode)')
         }
-        setIsMuted(false)
-        console.log('Microphone unmuted')
+      } else {
+        // For VAPI calls, use VAPI's audio control methods if available
+        if (!vapi) {
+          showErrorToast('VAPI not initialized. Please try again.')
+          return
+        }
+
+        if (vapiSupportsAudioControl()) {
+          // Use VAPI's built-in audio control methods
+          if (!isMuted) {
+            try {
+              await vapi.mute()
+              setIsMuted(true)
+              console.log('Microphone muted (VAPI mode)')
+            } catch (vapiError) {
+              console.warn('VAPI mute failed, falling back to local stream control:', vapiError)
+              await fallbackMuteControl(true)
+            }
+          } else {
+            try {
+              await vapi.unmute()
+              setIsMuted(false)
+              console.log('Microphone unmuted (VAPI mode)')
+            } catch (vapiError) {
+              console.warn('VAPI unmute failed, falling back to local stream control:', vapiError)
+              await fallbackMuteControl(false)
+            }
+          }
+        } else {
+          // VAPI doesn't support audio control, use fallback
+          console.log('VAPI audio control not supported, using fallback method')
+          await fallbackMuteControl(!isMuted)
+        }
       }
     } catch (error) {
       console.error('Error toggling mute:', error)
       showErrorToast('Failed to toggle mute. Please try again.')
+    } finally {
+      setIsMuteProcessing(false)
+    }
+  }
+
+  // Fallback mute control for when VAPI methods fail
+  const fallbackMuteControl = async (mute: boolean) => {
+    try {
+      if (!audioStreamRef.current) {
+        await getUserMedia()
+        
+        if (!audioStreamRef.current) {
+          throw new Error('Cannot access microphone')
+        }
+      }
+
+      audioStreamRef.current.getTracks().forEach(track => {
+        track.enabled = !mute
+      })
+      setIsMuted(mute)
+      console.log(`Microphone ${mute ? 'muted' : 'unmuted'} (fallback mode)`)
+    } catch (error) {
+      console.error('Fallback mute control failed:', error)
+      throw error
     }
   }
 
   // Get user media for mute functionality
   const getUserMedia = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      // Stop existing stream if any
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach(track => track.stop())
+        audioStreamRef.current = null
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 16000, // Optimize for speech
+          channelCount: 1 // Mono for better speech recognition
+        } 
+      })
       audioStreamRef.current = stream
       console.log('Audio stream obtained for mute functionality')
-    } catch (error) {
+      return stream
+    } catch (error: any) {
       console.error('Error getting user media:', error)
-      // Don't show error toast as this is just for mute functionality
+      
+      // Provide specific error messages based on error type
+      if (error.name === 'NotAllowedError') {
+        showErrorToast('Microphone access denied. Please allow microphone permissions and try again.')
+      } else if (error.name === 'NotFoundError') {
+        showErrorToast('No microphone found. Please check your device and try again.')
+      } else if (error.name === 'NotReadableError') {
+        showErrorToast('Microphone is already in use by another application. Please close other apps and try again.')
+      } else {
+        showErrorToast('Failed to access microphone. Please check permissions and try again.')
+      }
+      
+      return null
     }
   }
 
@@ -131,11 +243,13 @@ export default function VAPIWidget({
     setTranscript([])
     transcriptRef.current = []
 
-    // Get user media for mute functionality
-    await getUserMedia()
+    // Reset mute state for new call
+    setIsMuted(false)
 
     // If it's sell mode, show Anam video assistant instead of VAPI
     if (mode === 'sell') {
+      // Get user media for Anam video calls
+      await getUserMedia()
       startAnamChat()
       return
     }
@@ -145,6 +259,10 @@ export default function VAPIWidget({
     const assistantId = config.vapi.assistants[mode as keyof typeof config.vapi.assistants]
 
     try {
+      // For VAPI calls, we don't need to get user media upfront
+      // VAPI will handle the audio stream internally
+      console.log('Starting VAPI call with assistant:', assistantId)
+      
       // Start the call and get the call ID
       const call = await vapi.start(assistantId)
       console.log('VAPI start response:', call)
@@ -177,9 +295,14 @@ export default function VAPIWidget({
   }
 
   const endCall = () => {
+    console.log('Ending call, cleaning up audio streams...')
+    
     // Clean up audio stream
     if (audioStreamRef.current) {
-      audioStreamRef.current.getTracks().forEach(track => track.stop())
+      audioStreamRef.current.getTracks().forEach(track => {
+        track.stop()
+        console.log('Stopped audio track:', track.kind)
+      })
       audioStreamRef.current = null
     }
     
@@ -189,8 +312,16 @@ export default function VAPIWidget({
     if (activeModeRef.current === 'sell') {
       endAnamChat()
     } else if (vapi) {
-      vapi.stop()
+      try {
+        vapi.stop()
+        console.log('VAPI call stopped')
+      } catch (error) {
+        console.warn('Error stopping VAPI call:', error)
+      }
     }
+    
+    // Reset active mode
+    activeModeRef.current = null
   }
 
   // Anam video assistant functions
@@ -574,22 +705,28 @@ export default function VAPIWidget({
               {/* Mute Button */}
               <button
                 onClick={toggleMute}
+                disabled={isMuteProcessing}
                 className={`inline-flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${
                   isMuted 
                     ? 'bg-red-500 hover:bg-red-600 text-white' 
                     : 'bg-gray-500 hover:bg-gray-600 text-white'
-                }`}
+                } ${isMuteProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
                 title={isMuted ? 'Unmute' : 'Mute'}
               >
-                {isMuted ? (
+                {isMuteProcessing ? (
+                  <>
+                    <div className="mr-2 border-2 border-white border-t-transparent rounded-full w-4 h-4 animate-spin"></div>
+                    {isMuted ? 'Unmuting...' : 'Muting...'}
+                  </>
+                ) : isMuted ? (
                   <>
                     <MicOff className="mr-2 w-4 h-4" />
-                    Unmuted
+                    Muted
                   </>
                 ) : (
                   <>
                     <Mic className="mr-2 w-4 h-4" />
-                    Muted
+                    Unmuted
                   </>
                 )}
               </button>
@@ -639,6 +776,12 @@ export default function VAPIWidget({
                   <span className="flex items-center bg-red-100 px-2 py-1 rounded-full font-medium text-red-800 text-xs">
                     <MicOff className="mr-1 w-3 h-3" />
                     Muted
+                  </span>
+                )}
+                {isMuteProcessing && (
+                  <span className="flex items-center bg-yellow-100 px-2 py-1 rounded-full font-medium text-yellow-800 text-xs">
+                    <div className="mr-1 border-2 border-yellow-600 border-t-transparent rounded-full w-3 h-3 animate-spin"></div>
+                    Processing...
                   </span>
                 )}
               </div>
