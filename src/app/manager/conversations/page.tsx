@@ -57,6 +57,9 @@ export default function ConversationsPage() {
   const [conversationsError, setConversationsError] = useState<string | null>(null)
   const [transcriptSearch, setTranscriptSearch] = useState('')
   const [highlightedLine, setHighlightedLine] = useState<number | null>(null)
+  const [deletedConversations, setDeletedConversations] = useState<Conversation[]>([])
+  const [showDeleted, setShowDeleted] = useState(false)
+  const [isLoadingDeleted, setIsLoadingDeleted] = useState(false)
 
   // Check for existing session on component mount
   useEffect(() => {
@@ -68,6 +71,7 @@ export default function ConversationsPage() {
           setCurrentUser(user)
           setIsLoggedIn(true)
           fetchConversations()
+          fetchDeletedConversations()
         } else {
           localStorage.removeItem('user')
         }
@@ -141,6 +145,47 @@ export default function ConversationsPage() {
       setConversationsError('Failed to load conversations. Please try again.')
     } finally {
       setIsLoadingConversations(false)
+    }
+  }
+
+  // Fetch deleted conversations
+  const fetchDeletedConversations = async () => {
+    try {
+      setIsLoadingDeleted(true)
+      const response = await fetch('/api/conversations?deleted=true')
+      if (!response.ok) {
+        throw new Error('Failed to fetch deleted conversations')
+      }
+      
+      const data = await response.json()
+      setDeletedConversations(data)
+    } catch (err) {
+      console.error('Error fetching deleted conversations:', err)
+    } finally {
+      setIsLoadingDeleted(false)
+    }
+  }
+
+  // Handle hide/restore conversation
+  const handleConversationAction = async (conversationId: string, action: 'hide' | 'restore') => {
+    try {
+      const response = await fetch('/api/conversations', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ conversationId, action }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update conversation')
+      }
+
+      // Refresh both conversation lists
+      await Promise.all([fetchConversations(), fetchDeletedConversations()])
+    } catch (err) {
+      console.error('Error updating conversation:', err)
+      alert(`Failed to ${action} conversation. Please try again.`)
     }
   }
 
@@ -388,14 +433,24 @@ export default function ConversationsPage() {
                           {new Date(conversation.createdAt).toLocaleDateString()}
                         </td>
                         <td className="px-3 sm:px-6 py-4 font-medium text-xs sm:text-sm whitespace-nowrap">
-                          <button
-                            onClick={() => setSelectedConversation(conversation)}
-                            className="inline-flex items-center bg-blue-100 hover:bg-blue-200 px-2 sm:px-3 py-1 border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-medium text-blue-700 text-xs sm:text-sm leading-4"
-                          >
-                            <Eye className="mr-1 w-3 sm:w-4 h-3 sm:h-4" />
-                            <span className="hidden sm:inline">View Transcript</span>
-                            <span className="sm:hidden">View</span>
-                          </button>
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => setSelectedConversation(conversation)}
+                              className="inline-flex items-center bg-blue-100 hover:bg-blue-200 px-2 sm:px-3 py-1 border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-medium text-blue-700 text-xs sm:text-sm leading-4"
+                            >
+                              <Eye className="mr-1 w-3 sm:w-4 h-3 sm:h-4" />
+                              <span className="hidden sm:inline">View</span>
+                            </button>
+                            <button
+                              onClick={() => handleConversationAction(conversation.id, 'hide')}
+                              className="inline-flex items-center bg-red-100 hover:bg-red-200 px-2 sm:px-3 py-1 border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 font-medium text-red-700 text-xs sm:text-sm leading-4"
+                            >
+                              <svg className="mr-1 w-3 sm:w-4 h-3 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                              </svg>
+                              <span className="hidden sm:inline">Hide</span>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -406,6 +461,96 @@ export default function ConversationsPage() {
           )}
         </>
       )}
+
+      {/* Deleted Conversations Section */}
+      <div className="bg-white shadow rounded-lg overflow-hidden">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-gray-200 border-b">
+          <div className="flex justify-between items-center">
+            <h3 className="font-medium text-gray-900 text-base sm:text-lg">Deleted Conversations</h3>
+            <button
+              onClick={() => setShowDeleted(!showDeleted)}
+              className="inline-flex items-center bg-white hover:bg-gray-50 shadow-sm px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-medium text-gray-700 text-sm leading-4"
+            >
+              {showDeleted ? 'Hide' : 'Show'} Deleted
+            </button>
+          </div>
+        </div>
+        
+        {showDeleted && (
+          <div className="overflow-x-auto">
+            {isLoadingDeleted ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="flex items-center space-x-2">
+                  <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                  <span className="text-gray-600 text-sm">Loading deleted conversations...</span>
+                </div>
+              </div>
+            ) : deletedConversations.length === 0 ? (
+              <div className="px-4 sm:px-6 py-8 text-center">
+                <p className="text-gray-500 text-sm">No deleted conversations</p>
+              </div>
+            ) : (
+              <table className="divide-y divide-gray-200 min-w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-3 sm:px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
+                      Rep
+                    </th>
+                    <th className="px-3 sm:px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
+                      Duration
+                    </th>
+                    <th className="px-3 sm:px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
+                      Grade
+                    </th>
+                    <th className="px-3 sm:px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-3 sm:px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {deletedConversations.map((conversation) => (
+                    <tr key={conversation.id} className="bg-gray-50 hover:bg-gray-50">
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="font-medium text-gray-500 text-xs sm:text-sm">
+                            {conversation.user.firstName} {conversation.user.lastName}
+                          </div>
+                          <div className="max-w-32 sm:max-w-none text-gray-400 text-xs sm:text-sm truncate">{conversation.user.email}</div>
+                        </div>
+                      </td>
+                      <td className="px-3 sm:px-6 py-4 text-gray-500 text-xs sm:text-sm whitespace-nowrap">
+                        {formatDuration(conversation.duration)}
+                      </td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getGradeColor(conversation.grade)}`}>
+                          {conversation.grade}
+                        </span>
+                      </td>
+                      <td className="px-3 sm:px-6 py-4 text-gray-500 text-xs sm:text-sm whitespace-nowrap">
+                        {new Date(conversation.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-3 sm:px-6 py-4 font-medium text-xs sm:text-sm whitespace-nowrap">
+                        <button
+                          onClick={() => handleConversationAction(conversation.id, 'restore')}
+                          className="inline-flex items-center bg-green-100 hover:bg-green-200 px-2 sm:px-3 py-1 border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 font-medium text-green-700 text-xs sm:text-sm leading-4"
+                        >
+                          <svg className="mr-1 w-3 sm:w-4 h-3 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                          </svg>
+                          <span className="hidden sm:inline">Restore</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Transcript Modal */}
       {selectedConversation && (

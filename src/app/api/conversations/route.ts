@@ -1,79 +1,24 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { Conversation } from "@prisma/client";
+import { NextRequest, NextResponse } from 'next/server'
+import { PrismaClient } from '@prisma/client'
 
-// Force dynamic rendering for this route
-export const dynamic = 'force-dynamic';
+const prisma = new PrismaClient()
+
+export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { userId, transcript, mergedTranscript, duration, grade, summary } =
-      body;
+    const body = await request.json()
+    const { userId, transcript, mergedTranscript, duration, grade, summary } = body
 
-    console.log('🔍 Backend API - Received conversation data:')
-    console.log('  - userId:', userId)
-    console.log('  - transcript:', transcript)
-    console.log('  - mergedTranscript:', mergedTranscript)
-    console.log('  - mergedTranscript type:', typeof mergedTranscript)
-    console.log('  - mergedTranscript isArray:', Array.isArray(mergedTranscript))
-    console.log('  - duration:', duration)
-
-    // Validate required fields
-    if (!userId || !transcript || !duration) {
-      return NextResponse.json(
-        { error: "User ID, transcript, and duration are required" },
-        { status: 400 }
-      );
-    }
-
-    // Convert mergedTranscript array to JSON string if provided
-    let mergedTranscriptJson = null;
-    if (mergedTranscript && Array.isArray(mergedTranscript)) {
-      mergedTranscriptJson = JSON.stringify(mergedTranscript);
-      console.log('  - mergedTranscriptJson:', mergedTranscriptJson)
-    } else {
-      console.log('  - mergedTranscript not processed (not array or empty)')
-    }
-
-    // Create conversation record with type assertion
     const conversation = await prisma.conversation.create({
       data: {
         userId,
         transcript,
-        mergedTranscript: mergedTranscriptJson,
+        mergedTranscript: mergedTranscript ? JSON.stringify(mergedTranscript) : null,
         duration,
-        grade: grade || null,
-        summary: summary || null,
-      } as any,
-    });
-
-    return NextResponse.json({
-      message: "Conversation saved successfully",
-      conversation,
-    });
-  } catch (error) {
-    console.error("Error saving conversation:", error);
-    return NextResponse.json(
-      { error: "Failed to save conversation" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
-
-    // If userId is provided, get conversations for that specific user
-    // If no userId, get all conversations (for manager view)
-    const whereClause = userId ? { userId } : {};
-
-    // Get conversations
-    const conversations = await prisma.conversation.findMany({
-      where: whereClause,
-      orderBy: { createdAt: "desc" },
+        grade,
+        summary,
+      },
       include: {
         user: {
           select: {
@@ -83,37 +28,102 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-    });
+    })
 
-    // Parse mergedTranscript JSON for each conversation
-    const conversationsWithParsedTranscript = conversations.map(
-      (conversation: Conversation) => {
-        let parsedMergedTranscript = null;
-        if (conversation.mergedTranscript) {
-          try {
-            parsedMergedTranscript = JSON.parse(conversation.mergedTranscript);
-          } catch (error) {
-            console.error(
-              "Error parsing mergedTranscript for conversation:",
-              conversation.id,
-              error
-            );
-          }
-        }
-
-        return {
-          ...conversation,
-          mergedTranscript: parsedMergedTranscript,
-        };
-      }
-    );
-
-    return NextResponse.json(conversationsWithParsedTranscript);
+    return NextResponse.json(conversation)
   } catch (error) {
-    console.error("Error fetching conversations:", error);
+    console.error('Error creating conversation:', error)
     return NextResponse.json(
-      { error: "Failed to fetch conversations" },
+      { error: 'Failed to create conversation' },
       { status: 500 }
-    );
+    )
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const showDeleted = searchParams.get('deleted') === 'true'
+
+    const conversations = await prisma.conversation.findMany({
+      where: {
+        deleted: showDeleted, // Show deleted conversations if requested
+      },
+      include: {
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    })
+
+    // Parse mergedTranscript back to array for each conversation
+    const conversationsWithParsedTranscript = conversations.map((conversation: any) => ({
+      ...conversation,
+      mergedTranscript: conversation.mergedTranscript ? JSON.parse(conversation.mergedTranscript) : null,
+    }))
+
+    return NextResponse.json(conversationsWithParsedTranscript)
+  } catch (error) {
+    console.error('Error fetching conversations:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch conversations' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { conversationId, action } = body
+
+    if (!conversationId || !action) {
+      return NextResponse.json(
+        { error: 'Missing conversationId or action' },
+        { status: 400 }
+      )
+    }
+
+    let updateData: any = {}
+    
+    if (action === 'hide') {
+      updateData.deleted = true
+    } else if (action === 'restore') {
+      updateData.deleted = false
+    } else {
+      return NextResponse.json(
+        { error: 'Invalid action. Use "hide" or "restore"' },
+        { status: 400 }
+      )
+    }
+
+    const conversation = await prisma.conversation.update({
+      where: { id: conversationId },
+      data: updateData,
+      include: {
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+    })
+
+    return NextResponse.json(conversation)
+  } catch (error) {
+    console.error('Error updating conversation:', error)
+    return NextResponse.json(
+      { error: 'Failed to update conversation' },
+      { status: 500 }
+    )
   }
 }

@@ -43,6 +43,7 @@ interface Conversation {
   duration: number
   grade?: string
   summary?: string
+  deleted?: boolean
   createdAt: string
 }
 
@@ -263,13 +264,13 @@ export default function RepPortal() {
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={isLoading}
+              <button
+                type="submit"
+                disabled={isLoading}
               className={`${quicksand.className} w-full disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transform transition-all duration-200 hover:scale-105 active:scale-95 text-sm sm:text-base shadow-lg`}
-            >
-              {isLoading ? 'Signing In...' : 'Sign In'}
-            </button>
+              >
+                {isLoading ? 'Signing In...' : 'Sign In'}
+              </button>
           </form>
         </div>
       </div>
@@ -436,87 +437,87 @@ export default function RepPortal() {
 
             {/* VAPI Widget */}
             <ClientOnly>
-              <VAPIWidget
-                userId={currentUser?.id}
-                remainingSeconds={userUsage?.remainingSeconds || 0}
-                onTranscriptUpdate={(transcript) => {
-                  console.log('Transcript updated:', transcript)
-                }}
-                onTimeLimitReached={() => {
-                  console.log('Time limit reached, refreshing usage data...')
-                  if (currentUser?.id) {
-                    fetchUserUsage(currentUser.id)
-                  }
-                }}
+            <VAPIWidget
+              userId={currentUser?.id}
+              remainingSeconds={userUsage?.remainingSeconds || 0}
+              onTranscriptUpdate={(transcript) => {
+                console.log('Transcript updated:', transcript)
+              }}
+              onTimeLimitReached={() => {
+                console.log('Time limit reached, refreshing usage data...')
+                if (currentUser?.id) {
+                  fetchUserUsage(currentUser.id)
+                }
+              }}
                 onCallEnd={async (duration, transcript, mergedTranscript) => {
                   console.log('Call ended:', { duration, transcript, mergedTranscript })
 
-                  // Analyze transcript with AI first
-                  let grade = null
-                  let summary = null
+                // Analyze transcript with AI first
+                let grade = null
+                let summary = null
 
-                  setIsAnalyzing(true)
-                  try {
-                    const analysisResponse = await fetch('/api/analyze-transcript', {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                      },
-                      body: JSON.stringify({ transcript }),
-                    })
+                setIsAnalyzing(true)
+                try {
+                  const analysisResponse = await fetch('/api/analyze-transcript', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ transcript }),
+                  })
 
-                    if (analysisResponse.ok) {
-                      const analysis = await analysisResponse.json()
-                      grade = analysis.grade
-                      summary = analysis.summary
-                      console.log('AI analysis completed:', analysis)
-                    } else {
-                      console.error('Failed to analyze transcript')
-                    }
-                  } catch (error) {
-                    console.error('Error analyzing transcript:', error)
-                  } finally {
-                    setIsAnalyzing(false)
+                  if (analysisResponse.ok) {
+                    const analysis = await analysisResponse.json()
+                    grade = analysis.grade
+                    summary = analysis.summary
+                    console.log('AI analysis completed:', analysis)
+                  } else {
+                    console.error('Failed to analyze transcript')
                   }
+                } catch (error) {
+                  console.error('Error analyzing transcript:', error)
+                } finally {
+                  setIsAnalyzing(false)
+                }
 
                   // Save conversation to database with AI analysis, accurate duration, and merged transcript
-                  setIsSaving(true)
-                  try {
-                    const response = await fetch('/api/conversations', {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                      },
-                      body: JSON.stringify({
-                        userId: currentUser?.id,
-                        transcript,
+                setIsSaving(true)
+                try {
+                  const response = await fetch('/api/conversations', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      userId: currentUser?.id,
+                      transcript,
                         mergedTranscript, // Add the merged transcript with speaker identification
-                        duration, // Now using accurate duration from timestamps
-                        grade,
-                        summary
-                      }),
-                    })
+                      duration, // Now using accurate duration from timestamps
+                      grade,
+                      summary
+                    }),
+                  })
 
-                    if (response.ok) {
+                  if (response.ok) {
                       console.log('Conversation saved successfully with AI analysis, accurate duration, and merged transcript:', duration)
                       // Refresh conversations for all users (both admin and regular reps)
                       fetchConversations()
-                    } else {
-                      console.error('Failed to save conversation')
-                    }
-                  } catch (error) {
-                    console.error('Error saving conversation:', error)
-                  } finally {
-                    setIsSaving(false)
-                    setShowSuccess(true)
-                    setTimeout(() => setShowSuccess(false), 3000) // Hide after 3 seconds
-                    // Refresh user usage data
-                    if (currentUser?.id) {
-                      fetchUserUsage(currentUser.id)
-                    }
+                  } else {
+                    console.error('Failed to save conversation')
                   }
-                }}
-              />
+                } catch (error) {
+                  console.error('Error saving conversation:', error)
+                } finally {
+                  setIsSaving(false)
+                  setShowSuccess(true)
+                  setTimeout(() => setShowSuccess(false), 3000) // Hide after 3 seconds
+                  // Refresh user usage data
+                  if (currentUser?.id) {
+                    fetchUserUsage(currentUser.id)
+                  }
+                }
+              }}
+            />
             </ClientOnly>
           </div>
         ) : (
@@ -583,14 +584,14 @@ export default function RepPortal() {
                         <div className="flex-shrink-0 ml-3">
                           <Eye className="w-4 h-4 text-gray-400" />
                         </div>
-                      </div>
+                  </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-          </div>
-        )}
+                    </div>
+                  )}
       </main>
 
       {/* Conversation Detail Modal */}
@@ -658,8 +659,8 @@ export default function RepPortal() {
                         </p>
                       </div>
                     </div>
-                  </div>
-                )}
+                    </div>
+                  )}
 
                 <div className="sm:col-span-2 lg:col-span-1 bg-gradient-to-r from-purple-50 to-pink-50 p-3 sm:p-4 border border-purple-200 rounded-xl">
                   <div className="flex items-center">
