@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { Users, Phone, TrendingUp, Download, AlertCircle, BarChart3, User, Lock, LogIn } from 'lucide-react'
 import { Inter, Poppins, Quicksand } from 'next/font/google'
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const poppins = Poppins({
   weight: ['300', '400', '500', '600', '700'],
   subsets: ['latin'],
@@ -62,7 +61,7 @@ export default function ManagerDashboard() {
   const [syncStatus, setSyncStatus] = useState<string>('')
   const [hasAdmin, setHasAdmin] = useState<boolean | null>(null)
   const [isSettingUp, setIsSettingUp] = useState(false)
-  const [setupCredentials, setSetupCredentials] = useState<{email: string, password: string} | null>(null)
+  const [setupCredentials, setSetupCredentials] = useState<{ email: string, password: string } | null>(null)
   const [stats, setStats] = useState<DashboardStats>({
     totalReps: 0,
     totalCalls: 0,
@@ -123,7 +122,7 @@ export default function ManagerDashboard() {
       if (response.ok) {
         setSetupCredentials(data.credentials)
         setHasAdmin(true)
-        
+
         // Auto-login with the created credentials
         const loginResponse = await fetch('/api/auth/login', {
           method: 'POST',
@@ -224,11 +223,13 @@ export default function ManagerDashboard() {
     return (
       // <div className={`${poppins.variable} ${quicksand.variable} flex justify-center items-center bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen px-4 sm:px-6`} suppressHydrationWarning>
       <div
-        className={`${poppins.variable} ${quicksand.variable} flex justify-center items-center bg-cover bg-center bg-no-repeat min-h-screen px-4 sm:px-6`}
-        style={{ backgroundImage: "url('/VitlBackground.png')" }}
+        className={`${poppins.variable} ${quicksand.variable} flex justify-center items-center min-h-screen px-4 sm:px-6 relative`}
         suppressHydrationWarning
       >
-        <div className="space-y-6 sm:space-y-8 w-full max-w-md">
+        {/* Background Blur Overlay */}
+        <div className="absolute inset-0 bg-black/20 backdrop-blur-sm"></div>
+
+        <div className="z-10 relative space-y-6 sm:space-y-8 w-full max-w-md">
           <div className="text-center">
             <div className="flex justify-center items-center bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg mx-auto rounded-full w-14 sm:w-16 h-14 sm:h-16">
               <BarChart3 className="w-6 sm:w-8 h-6 sm:h-8 text-white" />
@@ -276,7 +277,7 @@ export default function ManagerDashboard() {
               >
                 {isSettingUp ? 'Setting up...' : 'Create Default Admin User'}
               </button>
-              <p className="mt-2 text-gray-500 text-xs">This will create a default admin user with credentials you can use to log in.</p>
+              <p className="mt-2 text-white/80 text-xs">This will create a default admin user with credentials you can use to log in.</p>
             </div>
           )}
 
@@ -347,13 +348,13 @@ export default function ManagerDashboard() {
     const now = new Date()
     const time = new Date(timestamp)
     const diffInMinutes = Math.floor((now.getTime() - time.getTime()) / (1000 * 60))
-    
+
     if (diffInMinutes < 1) return 'Just now'
     if (diffInMinutes < 60) return `${diffInMinutes} min ago`
-    
+
     const diffInHours = Math.floor(diffInMinutes / 60)
     if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`
-    
+
     const diffInDays = Math.floor(diffInHours / 24)
     return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`
   }
@@ -367,12 +368,12 @@ export default function ManagerDashboard() {
   const handleImportData = async () => {
     setIsImporting(true)
     setImportStatus('Importing data from Google Sheets...')
-    
+
     try {
       const response = await fetch('/api/manager/import-sheet', {
         method: 'POST',
       })
-      
+
       if (response.ok) {
         setImportStatus('Data imported successfully!')
         // Refresh stats after import
@@ -391,12 +392,12 @@ export default function ManagerDashboard() {
   const handleSyncData = async () => {
     setIsSyncing(true)
     setSyncStatus('Syncing data to Google Sheets...')
-    
+
     try {
       const response = await fetch('/api/manager/sync-sheet', {
         method: 'POST',
       })
-      
+
       if (response.ok) {
         setSyncStatus('Data synced successfully!')
         // Refresh stats after sync
@@ -413,188 +414,188 @@ export default function ManagerDashboard() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-4">
-        <div>
-          <h1 className="font-bold text-gray-900 text-2xl sm:text-3xl">Manager Dashboard</h1>
-          <p className="mt-1 text-gray-600 text-sm sm:text-base">Welcome back, {currentUser?.firstName} {currentUser?.lastName}</p>
-        </div>
-      </div>
-
-      {/* Import & Sync Section */}
-      <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
+    <div className={`${poppins.variable} ${quicksand.variable} min-h-screen relative`}>
+      <div className="z-10 relative space-y-4 sm:space-y-6">
+        {/* Header */}
         <div className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-4">
           <div>
-            <h3 className="font-semibold text-gray-900 text-base sm:text-lg">Data Management</h3>
-            <p className="mt-1 text-gray-600 text-sm">Import from and sync to Google Sheets</p>
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={handleImportData}
-              disabled={isImporting}
-              className="flex items-center bg-blue-600 hover:bg-blue-700 disabled:opacity-50 px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium text-white text-sm transition-colors"
-            >
-              <Download className="mr-2 w-4 h-4" />
-              {isImporting ? 'Importing...' : 'Import Data'}
-            </button>
-            <button
-              onClick={handleSyncData}
-              disabled={isSyncing}
-              className="flex items-center bg-green-600 hover:bg-green-700 disabled:opacity-50 px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium text-white text-sm transition-colors"
-            >
-              <BarChart3 className="mr-2 w-4 h-4" />
-              {isSyncing ? 'Syncing...' : 'Sync to Sheet'}
-            </button>
-          </div>
-        </div>
-        {(importStatus || syncStatus) && (
-          <div className="space-y-2 mt-3 sm:mt-4">
-            {importStatus && (
-              <div className="p-3 border rounded-lg text-sm">
-                <span className={importStatus.includes('successfully') ? 'text-green-600' : 'text-red-600'}>
-                  {importStatus}
-                </span>
-              </div>
-            )}
-            {syncStatus && (
-              <div className="p-3 border rounded-lg text-sm">
-                <span className={syncStatus.includes('successfully') ? 'text-green-600' : 'text-red-600'}>
-                  {syncStatus}
-                </span>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Stats Cards */}
-      <div className="gap-4 sm:gap-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
-          <div className="flex items-center">
-            <div className="bg-blue-100 p-2 rounded-lg">
-              <Users className="w-5 sm:w-6 h-5 sm:h-6 text-blue-600" />
-            </div>
-            <div className="ml-3 sm:ml-4">
-              <p className="font-medium text-gray-600 text-xs sm:text-sm">Total Reps</p>
-              <p className="font-semibold text-gray-900 text-xl sm:text-2xl">{stats.totalReps}</p>
-            </div>
+            <h1 className="font-bold text-white text-2xl sm:text-3xl">Manager Dashboard</h1>
+            <p className="mt-1 text-white/80 text-sm sm:text-base">Welcome back, {currentUser?.firstName} {currentUser?.lastName}</p>
           </div>
         </div>
 
+        {/* Import & Sync Section */}
         <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
-          <div className="flex items-center">
-            <div className="bg-green-100 p-2 rounded-lg">
-              <Phone className="w-5 sm:w-6 h-5 sm:h-6 text-green-600" />
+          <div className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-4">
+            <div>
+              <h3 className="font-semibold text-gray-900 text-base sm:text-lg">Data Management</h3>
+              <p className="mt-1 text-gray-600 text-sm">Import from and sync to Google Sheets</p>
             </div>
-            <div className="ml-3 sm:ml-4">
-              <p className="font-medium text-gray-600 text-xs sm:text-sm">Total Calls</p>
-              <p className="font-semibold text-gray-900 text-xl sm:text-2xl">{stats.totalCalls}</p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleImportData}
+                disabled={isImporting}
+                className="flex items-center bg-blue-600 hover:bg-blue-700 disabled:opacity-50 px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium text-white text-sm transition-colors"
+              >
+                <Download className="mr-2 w-4 h-4" />
+                {isImporting ? 'Importing...' : 'Import Data'}
+              </button>
+              <button
+                onClick={handleSyncData}
+                disabled={isSyncing}
+                className="flex items-center bg-green-600 hover:bg-green-700 disabled:opacity-50 px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium text-white text-sm transition-colors"
+              >
+                <BarChart3 className="mr-2 w-4 h-4" />
+                {isSyncing ? 'Syncing...' : 'Sync to Sheet'}
+              </button>
+            </div>
+          </div>
+          {(importStatus || syncStatus) && (
+            <div className="space-y-2 mt-3 sm:mt-4">
+              {importStatus && (
+                <div className="p-3 border rounded-lg text-sm">
+                  <span className={importStatus.includes('successfully') ? 'text-green-600' : 'text-red-600'}>
+                    {importStatus}
+                  </span>
+                </div>
+              )}
+              {syncStatus && (
+                <div className="p-3 border rounded-lg text-sm">
+                  <span className={syncStatus.includes('successfully') ? 'text-green-600' : 'text-red-600'}>
+                    {syncStatus}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Stats Cards */}
+        <div className="gap-4 sm:gap-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
+            <div className="flex items-center">
+              <div className="bg-blue-100 p-2 rounded-lg">
+                <Users className="w-5 sm:w-6 h-5 sm:h-6 text-blue-600" />
+              </div>
+              <div className="ml-3 sm:ml-4">
+                <p className="font-medium text-gray-600 text-xs sm:text-sm">Total Reps</p>
+                <p className="font-semibold text-gray-900 text-xl sm:text-2xl">{stats.totalReps}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
+            <div className="flex items-center">
+              <div className="bg-green-100 p-2 rounded-lg">
+                <Phone className="w-5 sm:w-6 h-5 sm:h-6 text-green-600" />
+              </div>
+              <div className="ml-3 sm:ml-4">
+                <p className="font-medium text-gray-600 text-xs sm:text-sm">Total Calls</p>
+                <p className="font-semibold text-gray-900 text-xl sm:text-2xl">{stats.totalCalls}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
+            <div className="flex items-center">
+              <div className="bg-purple-100 p-2 rounded-lg">
+                <TrendingUp className="w-5 sm:w-6 h-5 sm:h-6 text-purple-600" />
+              </div>
+              <div className="ml-3 sm:ml-4">
+                <p className="font-medium text-gray-600 text-xs sm:text-sm">Avg Grade</p>
+                <p className="font-semibold text-gray-900 text-xl sm:text-2xl">{stats.avgGrade}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
+            <div className="flex items-center">
+              <div className="bg-orange-100 p-2 rounded-lg">
+                <TrendingUp className="w-5 sm:w-6 h-5 sm:h-6 text-orange-600" />
+              </div>
+              <div className="ml-3 sm:ml-4">
+                <p className="font-medium text-gray-600 text-xs sm:text-sm">Minutes Used</p>
+                <p className="font-semibold text-gray-900 text-xl sm:text-2xl">{stats.totalMinutes}</p>
+                <p className="text-gray-500 text-xs">of {stats.grantedMinutes} granted</p>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
-          <div className="flex items-center">
-            <div className="bg-purple-100 p-2 rounded-lg">
-              <TrendingUp className="w-5 sm:w-6 h-5 sm:h-6 text-purple-600" />
-            </div>
-            <div className="ml-3 sm:ml-4">
-              <p className="font-medium text-gray-600 text-xs sm:text-sm">Avg Grade</p>
-              <p className="font-semibold text-gray-900 text-xl sm:text-2xl">{stats.avgGrade}</p>
+        {/* Quick Actions */}
+        <div className="gap-4 sm:gap-6 grid grid-cols-1 lg:grid-cols-2">
+          <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
+            <h3 className="mb-3 sm:mb-4 font-semibold text-gray-900 text-base sm:text-lg">Quick Actions</h3>
+            <div className="space-y-2 sm:space-y-3">
+              <a
+                href="/manager/conversations"
+                className="block hover:bg-gray-50 p-2.5 sm:p-3 border border-gray-200 rounded-lg transition-colors"
+              >
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-gray-900 text-xs sm:text-sm">View Conversations</span>
+                  <span className="text-gray-500 text-xs">→</span>
+                </div>
+              </a>
+              <a
+                href="/manager/performance"
+                className="block hover:bg-gray-50 p-2.5 sm:p-3 border border-gray-200 rounded-lg transition-colors"
+              >
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-gray-900 text-xs sm:text-sm">Performance Analytics</span>
+                  <span className="text-gray-500 text-xs">→</span>
+                </div>
+              </a>
+              <a
+                href="/manager/config"
+                className="block hover:bg-gray-50 p-2.5 sm:p-3 border border-gray-200 rounded-lg transition-colors"
+              >
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-gray-900 text-xs sm:text-sm">Configure Google Sheets</span>
+                  <span className="text-gray-500 text-xs">→</span>
+                </div>
+              </a>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
-          <div className="flex items-center">
-            <div className="bg-orange-100 p-2 rounded-lg">
-              <TrendingUp className="w-5 sm:w-6 h-5 sm:h-6 text-orange-600" />
-            </div>
-            <div className="ml-3 sm:ml-4">
-              <p className="font-medium text-gray-600 text-xs sm:text-sm">Minutes Used</p>
-              <p className="font-semibold text-gray-900 text-xl sm:text-2xl">{stats.totalMinutes}</p>
-              <p className="text-gray-500 text-xs">of {stats.grantedMinutes} granted</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="gap-4 sm:gap-6 grid grid-cols-1 lg:grid-cols-2">
-        <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
-          <h3 className="mb-3 sm:mb-4 font-semibold text-gray-900 text-base sm:text-lg">Quick Actions</h3>
-          <div className="space-y-2 sm:space-y-3">
-            <a
-              href="/manager/conversations"
-              className="block hover:bg-gray-50 p-2.5 sm:p-3 border border-gray-200 rounded-lg transition-colors"
-            >
-              <div className="flex justify-between items-center">
-                <span className="font-medium text-gray-900 text-xs sm:text-sm">View Conversations</span>
-                <span className="text-gray-500 text-xs">→</span>
-              </div>
-            </a>
-            <a
-              href="/manager/performance"
-              className="block hover:bg-gray-50 p-2.5 sm:p-3 border border-gray-200 rounded-lg transition-colors"
-            >
-              <div className="flex justify-between items-center">
-                <span className="font-medium text-gray-900 text-xs sm:text-sm">Performance Analytics</span>
-                <span className="text-gray-500 text-xs">→</span>
-              </div>
-            </a>
-            <a
-              href="/manager/config"
-              className="block hover:bg-gray-50 p-2.5 sm:p-3 border border-gray-200 rounded-lg transition-colors"
-            >
-              <div className="flex justify-between items-center">
-                <span className="font-medium text-gray-900 text-xs sm:text-sm">Configure Google Sheets</span>
-                <span className="text-gray-500 text-xs">→</span>
-              </div>
-            </a>
-          </div>
-        </div>
-
-        <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
-          <h3 className="mb-3 sm:mb-4 font-semibold text-gray-900 text-base sm:text-lg">Recent Activity</h3>
-          <div className="space-y-2 sm:space-y-3">
-            {recentActivities.length === 0 ? (
-              <div className="py-3 sm:py-4 text-center">
-                <p className="text-gray-500 text-xs sm:text-sm">No recent activity</p>
-              </div>
-            ) : (
-              recentActivities.map((activity) => (
-                <div key={activity.id} className="flex items-center text-gray-600 text-xs sm:text-sm">
-                  <div className={`mr-2 sm:mr-3 rounded-full w-1.5 h-1.5 sm:w-2 sm:h-2 flex-shrink-0 ${
-                    activity.type === 'conversation' ? 'bg-green-400' : 'bg-blue-400'
-                  }`}></div>
-                  <div className="flex-1 min-w-0">
-                    <span className="block truncate">{activity.message}</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {activity.grade && (
-                        <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                          activity.grade === 'A' ? 'bg-green-100 text-green-800' :
-                          activity.grade === 'B' ? 'bg-blue-100 text-blue-800' :
-                          activity.grade === 'C' ? 'bg-yellow-100 text-yellow-800' :
-                          activity.grade === 'D' ? 'bg-orange-100 text-orange-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          Grade: {activity.grade}
+          <div className="bg-white shadow p-4 sm:p-6 rounded-lg">
+            <h3 className="mb-3 sm:mb-4 font-semibold text-gray-900 text-base sm:text-lg">Recent Activity</h3>
+            <div className="space-y-2 sm:space-y-3">
+              {recentActivities.length === 0 ? (
+                <div className="py-3 sm:py-4 text-center">
+                  <p className="text-gray-500 text-xs sm:text-sm">No recent activity</p>
+                </div>
+              ) : (
+                recentActivities.map((activity) => (
+                  <div key={activity.id} className="flex items-center text-gray-600 text-xs sm:text-sm">
+                    <div className={`mr-2 sm:mr-3 rounded-full w-1.5 h-1.5 sm:w-2 sm:h-2 flex-shrink-0 ${activity.type === 'conversation' ? 'bg-green-400' : 'bg-blue-400'
+                      }`}></div>
+                    <div className="flex-1 min-w-0">
+                      <span className="block truncate">{activity.message}</span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {activity.grade && (
+                          <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${activity.grade === 'A' ? 'bg-green-100 text-green-800' :
+                            activity.grade === 'B' ? 'bg-blue-100 text-blue-800' :
+                              activity.grade === 'C' ? 'bg-yellow-100 text-yellow-800' :
+                                activity.grade === 'D' ? 'bg-orange-100 text-orange-800' :
+                                  'bg-red-100 text-red-800'
+                            }`}>
+                            Grade: {activity.grade}
+                          </span>
+                        )}
+                        {activity.duration && (
+                          <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-800 text-xs">
+                            {formatDuration(activity.duration)}
+                          </span>
+                        )}
+                        <span className="text-gray-500 text-xs">
+                          {formatTimeAgo(activity.timestamp)}
                         </span>
-                      )}
-                      {activity.duration && (
-                        <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-800 text-xs">
-                          {formatDuration(activity.duration)}
-                        </span>
-                      )}
-                      <span className="text-gray-500 text-xs">
-                        {formatTimeAgo(activity.timestamp)}
-                      </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
         </div>
       </div>

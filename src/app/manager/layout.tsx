@@ -5,8 +5,14 @@ import { BarChart3, Settings, Users, LogOut, Menu, X } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { Quicksand } from 'next/font/google'
+import { Poppins } from 'next/font/google'
 
-const quicksand = Quicksand({ 
+const poppins = Poppins({
+  weight: ['400', '500', '600', '700'],
+  subsets: ['latin']
+})
+
+const quicksand = Quicksand({
   weight: ['300', '400', '500', '600', '700'],
   subsets: ['latin']
 })
@@ -102,8 +108,8 @@ export default function ManagerLayout({
   // If loading, show a simple loading state
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center bg-gray-50 min-h-screen">
-        <div className="text-gray-500">Loading...</div>
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-white/80">Loading...</div>
       </div>
     )
   }
@@ -114,7 +120,15 @@ export default function ManagerLayout({
   }
 
   return (
-    <div className={`${quicksand.className} bg-gray-50 min-h-screen`}>
+    <div
+      className={`${quicksand.className} bg-gray-50 min-h-screen`}
+      style={{
+        backgroundImage: "url('/VitlBackground.png')",
+        backgroundSize: '100%',
+        backgroundPosition: 'top center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
       {/* Header */}
       <header className="z-50 relative bg-slate-800 shadow-lg border-slate-700 border-b">
         <div className="mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
@@ -127,7 +141,7 @@ export default function ManagerLayout({
                 </span>
               </Link>
             </div>
-            
+
             {/* Desktop Navigation */}
             <nav className="hidden md:flex space-x-6 lg:space-x-8">
               <Link
@@ -201,16 +215,15 @@ export default function ManagerLayout({
 
       {/* Mobile Drawer Overlay */}
       {isMobileMenuOpen && (
-        <div 
+        <div
           className="md:hidden z-40 fixed inset-0 bg-black bg-opacity-50 transition-opacity duration-300"
           onClick={closeMobileMenu}
         />
       )}
 
       {/* Mobile Drawer Menu */}
-      <div className={`md:hidden fixed top-0 left-0 h-full w-64 bg-slate-800 shadow-xl transform transition-transform duration-300 ease-in-out z-50 ${
-        isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
+      <div className={`md:hidden fixed top-0 left-0 h-full w-64 bg-slate-800 shadow-xl transform transition-transform duration-300 ease-in-out z-50 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}>
         {/* Drawer Header */}
         <div className="flex justify-between items-center p-4 border-slate-700 border-b">
           <div className="flex items-center">
@@ -291,6 +304,24 @@ export default function ManagerLayout({
             <LogOut className="mr-3 w-5 h-5" />
             <span className="font-medium text-sm">Sign Out</span>
           </button>
+        </div>
+      </div>
+
+      {/* Welcome Message */}
+      <div className="z-10 relative bg-gradient-to-r from-gray-50 to-gray-100 border-b">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8 py-3 max-w-7xl">
+          <div className="flex sm:flex-row flex-col justify-between items-center">
+            <div className="flex items-center space-x-3">
+              <p className={`${poppins.className} text-sm text-gray-700`}>
+                Welcome back, <span className="font-semibold">{currentUser?.firstName} {currentUser?.lastName}</span>
+                {currentUser?.role === 'ADMIN' && (
+                  <span className="inline-flex items-center bg-blue-100 ml-2 px-2 py-0.5 rounded-full font-medium text-blue-800 text-xs">
+                    Admin
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 

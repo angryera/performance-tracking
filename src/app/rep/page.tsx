@@ -194,11 +194,19 @@ export default function RepPortal() {
     return (
       //<div className={`${poppins.variable} ${quicksand.variable} flex justify-center items-center bg-gradient-to-br from-green-50 to-emerald-100 min-h-screen px-4 sm:px-6`} suppressHydrationWarning>
       <div
-        className={`${poppins.variable} ${quicksand.variable} flex justify-center items-center bg-cover bg-center bg-no-repeat min-h-screen px-4 sm:px-6`}
-        style={{ backgroundImage: "url('/VitlBackground.png')" }}
+        className={`${poppins.variable} ${quicksand.variable} flex justify-center items-center min-h-screen px-4 sm:px-6 relative`}
+        style={{
+          backgroundImage: "url('/VitlBackground.png')",
+          backgroundSize: '100%',
+          backgroundPosition: 'top center',
+          backgroundRepeat: 'no-repeat',
+        }}
         suppressHydrationWarning
->
-        <div className="space-y-6 sm:space-y-8 w-full max-w-md">
+      >
+        {/* Background Blur Overlay */}
+        <div className="absolute inset-0 bg-black/20 backdrop-blur-sm"></div>
+
+        <div className="z-10 relative space-y-6 sm:space-y-8 w-full max-w-md">
           <div className="text-center">
             <div className="flex justify-center items-center mx-auto w-14 sm:w-16 h-14 sm:h-16">
               <Image
@@ -287,9 +295,18 @@ export default function RepPortal() {
   return (
     // <div className={`${poppins.variable} ${quicksand.className} bg-gradient-to-br from-green-50 to-emerald-100 min-h-screen`} suppressHydrationWarning>
     <div
-      className={`${poppins.variable} ${quicksand.className} bg-cover bg-center bg-no-repeat min-h-screen`}
-      style={{ backgroundImage: "url('/VitlBackground.png')" }}
-      suppressHydrationWarning>
+      className={`${poppins.variable} ${quicksand.className} min-h-screen relative`}
+      style={{
+        backgroundImage: "url('/VitlBackground.png')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }}
+      suppressHydrationWarning
+    >
+      {/* Background Blur Overlay */}
+      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm"></div>
+
       {/* Header */}
       <header className="z-50 relative bg-white shadow-lg border-gray-200 border-b">
         <div className="mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
@@ -336,7 +353,7 @@ export default function RepPortal() {
       </header>
 
       {/* Welcome Message */}
-      <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-100 border-b">
+      <div className="z-10 relative bg-gradient-to-r from-green-50 to-emerald-50 border-green-100 border-b">
         <div className="mx-auto px-4 sm:px-6 lg:px-8 py-3 max-w-7xl">
           <div className="flex sm:flex-row flex-col justify-between items-center">
             <div className="flex items-center space-x-3">
@@ -357,61 +374,33 @@ export default function RepPortal() {
       </div>
 
       {/* Tab Navigation */}
-      {/* Tab Navigation */}
-        <div className="mx-auto px-4 sm:px-6 lg:px-8 pt-6 max-w-7xl">
-          <div className="border-gray-200 border-b">
-            <nav className="flex space-x-8 -mb-px">
-              <button
-                onClick={() => setActiveTab('dashboard')}
-                className={`py-2 px-1 border-b-2 text-sm ${
-                  activeTab === 'dashboard'
-                    ? 'border-white text-white font-bold'
-                    : 'border-transparent text-white/70 font-medium hover:text-white hover:border-white/50'
-                }`}
-              >
-                Dashboard
-              </button>
-              <button
-                onClick={() => setActiveTab('management')}
-                className={`py-2 px-1 border-b-2 text-sm ${
-                  activeTab === 'management'
-                    ? 'border-white text-white font-bold'
-                    : 'border-transparent text-white/70 font-medium hover:text-white hover:border-white/50'
-                }`}
-              >
-                My Data
-              </button>
-            </nav>
-          </div>
-        </div>
-
-      {/* <div className="mx-auto px-4 sm:px-6 lg:px-8 pt-6 max-w-7xl">
+      <div className="z-10 relative mx-auto px-4 sm:px-6 lg:px-8 pt-6 max-w-7xl">
         <div className="border-gray-200 border-b">
           <nav className="flex space-x-8 -mb-px">
             <button
               onClick={() => setActiveTab('dashboard')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'dashboard'
-                ? 'border-green-500 text-green-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              className={`py-2 px-1 border-b-2 text-sm ${activeTab === 'dashboard'
+                ? 'border-white text-white font-bold'
+                : 'border-transparent text-white/70 font-medium hover:text-white hover:border-white/50'
                 }`}
             >
               Dashboard
             </button>
             <button
               onClick={() => setActiveTab('management')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'management'
-                ? 'border-green-500 text-green-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              className={`py-2 px-1 border-b-2 text-sm ${activeTab === 'management'
+                ? 'border-white text-white font-bold'
+                : 'border-transparent text-white/70 font-medium hover:text-white hover:border-white/50'
                 }`}
             >
               My Data
             </button>
           </nav>
         </div>
-      </div> */}
+      </div>
 
       {/* Main Content */}
-      <main className="mx-auto px-4 sm:px-6 lg:px-8 py-6 max-w-7xl">
+      <main className="z-10 relative mx-auto px-4 sm:px-6 lg:px-8 py-6 max-w-7xl">
         {activeTab === 'dashboard' ? (
           <div className="space-y-6">
             {/* Usage Stats */}

@@ -101,8 +101,8 @@ export default function PerformancePage() {
       {/* Header */}
       <div className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="font-bold text-gray-900 text-2xl sm:text-3xl">Performance Analytics</h1>
-          <p className="mt-1 text-gray-600 text-sm sm:text-base">Track and analyze your team's performance metrics</p>
+          <h1 className="font-bold text-white text-2xl sm:text-3xl">Performance Analytics</h1>
+          <p className="mt-1 text-white/80 text-sm sm:text-base">Track and analyze your team's performance metrics</p>
         </div>
         <div className="flex items-center space-x-2">
           <label className="font-medium text-gray-700 text-xs sm:text-sm">Period:</label>
@@ -123,8 +123,8 @@ export default function PerformancePage() {
       {isLoading && (
         <div className="flex justify-center items-center py-8 sm:py-12">
           <div className="flex items-center space-x-2">
-            <Loader2 className="w-5 sm:w-6 h-5 sm:h-6 text-blue-600 animate-spin" />
-            <span className="text-gray-600 text-sm sm:text-base">Loading performance data...</span>
+            <Loader2 className="w-5 sm:w-6 h-5 sm:h-6 text-white animate-spin" />
+            <span className="text-white/80 text-sm sm:text-base">Loading performance data...</span>
           </div>
         </div>
       )}

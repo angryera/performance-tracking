@@ -33,7 +33,7 @@ interface Conversation {
     email: string
   }
   transcript: string
-  mergedTranscript?: Array<{role: string, text: string}>
+  mergedTranscript?: Array<{ role: string, text: string }>
   duration: number
   grade: string
   summary: string
@@ -140,12 +140,12 @@ export default function ConversationsPage() {
     try {
       setIsLoadingConversations(true)
       setConversationsError(null)
-      
+
       const response = await fetch('/api/conversations')
       if (!response.ok) {
         throw new Error('Failed to fetch conversations')
       }
-      
+
       const data = await response.json()
       setConversations(data)
     } catch (err) {
@@ -164,7 +164,7 @@ export default function ConversationsPage() {
       if (!response.ok) {
         throw new Error('Failed to fetch deleted conversations')
       }
-      
+
       const data = await response.json()
       setDeletedConversations(data)
     } catch (err) {
@@ -200,10 +200,10 @@ export default function ConversationsPage() {
   // Show confirmation modal
   const showConfirmation = (conversation: Conversation, action: 'hide' | 'restore') => {
     const actionText = action === 'hide' ? 'hide' : 'restore'
-    const message = action === 'hide' 
+    const message = action === 'hide'
       ? `Are you sure you want to hide the conversation with ${conversation.user.firstName} ${conversation.user.lastName}? This action can be undone.`
       : `Are you sure you want to restore the conversation with ${conversation.user.firstName} ${conversation.user.lastName}?`
-    
+
     setConfirmAction({
       type: action,
       conversation,
@@ -215,16 +215,16 @@ export default function ConversationsPage() {
   // Execute confirmed action
   const executeConfirmedAction = async () => {
     if (!confirmAction) return
-    
+
     try {
       const response = await fetch('/api/conversations', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          conversationId: confirmAction.conversation.id, 
-          action: confirmAction.type 
+        body: JSON.stringify({
+          conversationId: confirmAction.conversation.id,
+          action: confirmAction.type
         }),
       })
 
@@ -234,7 +234,7 @@ export default function ConversationsPage() {
 
       // Refresh both conversation lists
       await Promise.all([fetchConversations(), fetchDeletedConversations()])
-      
+
       // Close modal and reset
       setShowConfirmModal(false)
       setConfirmAction(null)
@@ -252,8 +252,8 @@ export default function ConversationsPage() {
 
   const filteredConversations = conversations.filter(conv => {
     const matchesSearch = conv.user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         conv.user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         conv.user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      conv.user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      conv.user.email.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesGrade = selectedGrade === 'all' || conv.grade === selectedGrade
     return matchesSearch && matchesGrade
   })
@@ -371,8 +371,8 @@ export default function ConversationsPage() {
       {/* Header */}
       <div className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="font-bold text-gray-900 text-2xl sm:text-3xl">Conversations</h1>
-          <p className="mt-1 text-gray-600 text-sm sm:text-base">View and analyze all conversation transcripts</p>
+          <h1 className="font-bold text-white text-2xl sm:text-3xl">Conversations</h1>
+          <p className="mt-1 text-white/80 text-sm sm:text-base">View and analyze all conversation transcripts</p>
         </div>
       </div>
 
@@ -413,8 +413,8 @@ export default function ConversationsPage() {
       {isLoadingConversations && (
         <div className="flex justify-center items-center py-8 sm:py-12">
           <div className="flex items-center space-x-2">
-            <Loader2 className="w-5 sm:w-6 h-5 sm:h-6 text-blue-600 animate-spin" />
-            <span className="text-gray-600 text-sm sm:text-base">Loading conversations...</span>
+            <Loader2 className="w-5 sm:w-6 h-5 sm:h-6 text-white animate-spin" />
+            <span className="text-white/80 text-sm sm:text-base">Loading conversations...</span>
           </div>
         </div>
       )}
@@ -536,19 +536,19 @@ export default function ConversationsPage() {
             </button>
           </div>
         </div>
-        
+
         {showDeleted && (
           <div className="overflow-x-auto">
             {isLoadingDeleted ? (
               <div className="flex justify-center items-center py-8">
                 <div className="flex items-center space-x-2">
-                  <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
-                  <span className="text-gray-600 text-sm">Loading deleted conversations...</span>
+                  <Loader2 className="w-5 h-5 text-white animate-spin" />
+                  <span className="text-white/80 text-sm">Loading deleted conversations...</span>
                 </div>
               </div>
             ) : deletedConversations.length === 0 ? (
               <div className="px-4 sm:px-6 py-8 text-center">
-                <p className="text-gray-500 text-sm">No deleted conversations</p>
+                <p className="text-white/80 text-sm">No deleted conversations</p>
               </div>
             ) : (
               <table className="divide-y divide-gray-200 min-w-full">
@@ -618,11 +618,10 @@ export default function ConversationsPage() {
         <div className="z-50 fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 backdrop-blur-sm !mt-0 p-4">
           <div className="bg-white shadow-2xl rounded-2xl w-full max-w-md overflow-hidden">
             {/* Header */}
-            <div className={`px-6 py-4 ${
-              confirmAction.type === 'hide' 
-                ? 'bg-gradient-to-r from-red-500 to-pink-500' 
+            <div className={`px-6 py-4 ${confirmAction.type === 'hide'
+                ? 'bg-gradient-to-r from-red-500 to-pink-500'
                 : 'bg-gradient-to-r from-green-500 to-emerald-500'
-            } text-white`}>
+              } text-white`}>
               <div className="flex items-center">
                 <div className="bg-white bg-opacity-20 mr-3 p-2 rounded-lg">
                   {confirmAction.type === 'hide' ? (
@@ -677,11 +676,10 @@ export default function ConversationsPage() {
                 </button>
                 <button
                   onClick={executeConfirmedAction}
-                  className={`flex-1 px-4 py-2 text-white font-medium rounded-lg transition-colors ${
-                    confirmAction.type === 'hide'
+                  className={`flex-1 px-4 py-2 text-white font-medium rounded-lg transition-colors ${confirmAction.type === 'hide'
                       ? 'bg-red-500 hover:bg-red-600'
                       : 'bg-green-500 hover:bg-green-600'
-                  }`}
+                    }`}
                 >
                   {confirmAction.type === 'hide' ? 'Hide' : 'Restore'}
                 </button>
@@ -797,13 +795,13 @@ export default function ConversationsPage() {
                     <h4 className="font-semibold text-gray-900 text-base sm:text-lg">Full Conversation Transcript</h4>
                   </div>
                   <div className="text-gray-500 text-xs sm:text-sm">
-                    {selectedConversation.mergedTranscript ? 
-                      `${selectedConversation.mergedTranscript.length} messages` : 
+                    {selectedConversation.mergedTranscript ?
+                      `${selectedConversation.mergedTranscript.length} messages` :
                       `${selectedConversation.transcript.split('\n').length} lines`
                     }
                   </div>
                 </div>
-                
+
                 <div className="bg-gray-50 border border-gray-200 rounded-xl overflow-hidden">
                   {/* Transcript Header */}
                   <div className="bg-gray-100 px-3 sm:px-4 py-2 border-gray-200 border-b">
@@ -828,7 +826,7 @@ export default function ConversationsPage() {
                       </span>
                     </div>
                   </div>
-                  
+
                   {/* Transcript Content */}
                   <div className="max-h-64 sm:max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                     <div className="p-3 sm:p-4">
@@ -840,27 +838,25 @@ export default function ConversationsPage() {
                               const isUser = message.role === 'user'
                               const isAssistant = message.role === 'assistant'
                               const hasSearchMatch = transcriptSearch && message.text.toLowerCase().includes(transcriptSearch.toLowerCase())
-                              
+
                               return (
                                 <div key={index} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-                                  <div className={`max-w-xs sm:max-w-sm lg:max-w-md px-3 py-2 rounded-2xl ${
-                                    isUser 
-                                      ? 'bg-blue-500 text-white rounded-br-md' 
+                                  <div className={`max-w-xs sm:max-w-sm lg:max-w-md px-3 py-2 rounded-2xl ${isUser
+                                      ? 'bg-blue-500 text-white rounded-br-md'
                                       : 'bg-gray-200 text-gray-800 rounded-bl-md'
-                                  } ${hasSearchMatch ? 'ring-2 ring-yellow-400 ring-opacity-75' : ''}`}>
+                                    } ${hasSearchMatch ? 'ring-2 ring-yellow-400 ring-opacity-75' : ''}`}>
                                     <div className="flex items-center space-x-2 mb-1">
-                                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                                        isUser 
-                                          ? 'bg-blue-400 bg-opacity-30 text-white' 
+                                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${isUser
+                                          ? 'bg-blue-400 bg-opacity-30 text-white'
                                           : 'bg-gray-300 text-gray-700'
-                                      }`}>
+                                        }`}>
                                         {isUser ? 'Me' : 'AI'}
                                       </span>
                                     </div>
                                     <p className="text-sm leading-relaxed">
                                       {transcriptSearch ? (
-                                        <span dangerouslySetInnerHTML={{ 
-                                          __html: highlightText(message.text || '\u00A0', transcriptSearch) 
+                                        <span dangerouslySetInnerHTML={{
+                                          __html: highlightText(message.text || '\u00A0', transcriptSearch)
                                         }} />
                                       ) : (
                                         message.text || '\u00A0'
@@ -875,8 +871,8 @@ export default function ConversationsPage() {
                             <div className="bg-gray-100 p-3 rounded-lg">
                               <p className="text-gray-600 text-sm">
                                 {transcriptSearch ? (
-                                  <span dangerouslySetInnerHTML={{ 
-                                    __html: highlightText(selectedConversation.transcript || 'No transcript available', transcriptSearch) 
+                                  <span dangerouslySetInnerHTML={{
+                                    __html: highlightText(selectedConversation.transcript || 'No transcript available', transcriptSearch)
                                   }} />
                                 ) : (
                                   selectedConversation.transcript || 'No transcript available'
@@ -890,29 +886,27 @@ export default function ConversationsPage() {
                             const isUser = line.toLowerCase().includes('user:') || line.toLowerCase().includes('rep:')
                             const isAssistant = line.toLowerCase().includes('assistant:') || line.toLowerCase().includes('customer:')
                             const hasSearchMatch = transcriptSearch && line.toLowerCase().includes(transcriptSearch.toLowerCase())
-                            
+
                             if (!line.trim()) return null
-                            
+
                             return (
                               <div key={index} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-xs sm:max-w-sm lg:max-w-md px-3 py-2 rounded-2xl ${
-                                  isUser 
-                                    ? 'bg-blue-500 text-white rounded-br-md' 
+                                <div className={`max-w-xs sm:max-w-sm lg:max-w-md px-3 py-2 rounded-2xl ${isUser
+                                    ? 'bg-blue-500 text-white rounded-br-md'
                                     : 'bg-gray-200 text-gray-800 rounded-bl-md'
-                                } ${hasSearchMatch ? 'ring-2 ring-yellow-400 ring-opacity-75' : ''}`}>
+                                  } ${hasSearchMatch ? 'ring-2 ring-yellow-400 ring-opacity-75' : ''}`}>
                                   <div className="flex items-center space-x-2 mb-1">
-                                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                                      isUser 
-                                        ? 'bg-blue-400 bg-opacity-30 text-white' 
+                                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${isUser
+                                        ? 'bg-blue-400 bg-opacity-30 text-white'
                                         : 'bg-gray-300 text-gray-700'
-                                    }`}>
+                                      }`}>
                                       {isUser ? 'Me' : 'AI'}
                                     </span>
                                   </div>
                                   <p className="text-sm leading-relaxed">
                                     {transcriptSearch ? (
-                                      <span dangerouslySetInnerHTML={{ 
-                                        __html: highlightText(line || '\u00A0', transcriptSearch) 
+                                      <span dangerouslySetInnerHTML={{
+                                        __html: highlightText(line || '\u00A0', transcriptSearch)
                                       }} />
                                     ) : (
                                       line || '\u00A0'
@@ -926,7 +920,7 @@ export default function ConversationsPage() {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Transcript Footer */}
                   <div className="bg-gray-100 px-3 sm:px-4 py-2 border-gray-200 border-t">
                     <div className="flex justify-between items-center text-gray-500 text-xs">
