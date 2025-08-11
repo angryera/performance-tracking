@@ -61,6 +61,14 @@ export default function ConversationsPage() {
   const [showDeleted, setShowDeleted] = useState(false)
   const [isLoadingDeleted, setIsLoadingDeleted] = useState(false)
 
+  // Confirmation modal states
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [confirmAction, setConfirmAction] = useState<{
+    type: 'hide' | 'restore'
+    conversation: Conversation
+    message: string
+  } | null>(null)
+
   // Check for existing session on component mount
   useEffect(() => {
     const savedUser = localStorage.getItem('user')
@@ -187,6 +195,59 @@ export default function ConversationsPage() {
       console.error('Error updating conversation:', err)
       alert(`Failed to ${action} conversation. Please try again.`)
     }
+  }
+
+  // Show confirmation modal
+  const showConfirmation = (conversation: Conversation, action: 'hide' | 'restore') => {
+    const actionText = action === 'hide' ? 'hide' : 'restore'
+    const message = action === 'hide' 
+      ? `Are you sure you want to hide the conversation with ${conversation.user.firstName} ${conversation.user.lastName}? This action can be undone.`
+      : `Are you sure you want to restore the conversation with ${conversation.user.firstName} ${conversation.user.lastName}?`
+    
+    setConfirmAction({
+      type: action,
+      conversation,
+      message
+    })
+    setShowConfirmModal(true)
+  }
+
+  // Execute confirmed action
+  const executeConfirmedAction = async () => {
+    if (!confirmAction) return
+    
+    try {
+      const response = await fetch('/api/conversations', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          conversationId: confirmAction.conversation.id, 
+          action: confirmAction.type 
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update conversation')
+      }
+
+      // Refresh both conversation lists
+      await Promise.all([fetchConversations(), fetchDeletedConversations()])
+      
+      // Close modal and reset
+      setShowConfirmModal(false)
+      setConfirmAction(null)
+    } catch (err) {
+      console.error('Error updating conversation:', err)
+      alert(`Failed to ${confirmAction.type} conversation. Please try again.`)
+    }
+  }
+
+  // Cancel confirmation
+  const cancelConfirmation = () => {
+    setShowConfirmModal(false)
+    setConfirmAction(null)
   }
 
   const filteredConversations = conversations.filter(conv => {
@@ -442,7 +503,7 @@ export default function ConversationsPage() {
                               <span className="hidden sm:inline">View</span>
                             </button>
                             <button
-                              onClick={() => handleConversationAction(conversation.id, 'hide')}
+                              onClick={() => showConfirmation(conversation, 'hide')}
                               className="inline-flex items-center bg-red-100 hover:bg-red-200 px-2 sm:px-3 py-1 border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 font-medium text-red-700 text-xs sm:text-sm leading-4"
                             >
                               <svg className="mr-1 w-3 sm:w-4 h-3 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -534,7 +595,7 @@ export default function ConversationsPage() {
                       </td>
                       <td className="px-3 sm:px-6 py-4 font-medium text-xs sm:text-sm whitespace-nowrap">
                         <button
-                          onClick={() => handleConversationAction(conversation.id, 'restore')}
+                          onClick={() => showConfirmation(conversation, 'restore')}
                           className="inline-flex items-center bg-green-100 hover:bg-green-200 px-2 sm:px-3 py-1 border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 font-medium text-green-700 text-xs sm:text-sm leading-4"
                         >
                           <svg className="mr-1 w-3 sm:w-4 h-3 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -551,6 +612,84 @@ export default function ConversationsPage() {
           </div>
         )}
       </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && confirmAction && (
+        <div className="z-50 fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 backdrop-blur-sm !mt-0 p-4">
+          <div className="bg-white shadow-2xl rounded-2xl w-full max-w-md overflow-hidden">
+            {/* Header */}
+            <div className={`px-6 py-4 ${
+              confirmAction.type === 'hide' 
+                ? 'bg-gradient-to-r from-red-500 to-pink-500' 
+                : 'bg-gradient-to-r from-green-500 to-emerald-500'
+            } text-white`}>
+              <div className="flex items-center">
+                <div className="bg-white bg-opacity-20 mr-3 p-2 rounded-lg">
+                  {confirmAction.type === 'hide' ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                    </svg>
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">
+                    Confirm {confirmAction.type === 'hide' ? 'Hide' : 'Restore'}
+                  </h3>
+                  <p className="opacity-90 text-sm">
+                    {confirmAction.type === 'hide' ? 'Hide Conversation' : 'Restore Conversation'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <div className="mb-4">
+                <div className="flex items-center mb-3">
+                  <div className="flex justify-center items-center bg-gray-100 mr-3 rounded-full w-10 h-10">
+                    <span className="font-medium text-gray-600 text-sm">
+                      {confirmAction.conversation.user.firstName[0]}{confirmAction.conversation.user.lastName[0]}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {confirmAction.conversation.user.firstName} {confirmAction.conversation.user.lastName}
+                    </p>
+                    <p className="text-gray-500 text-sm">{confirmAction.conversation.user.email}</p>
+                  </div>
+                </div>
+                <p className="text-gray-700 text-sm leading-relaxed">
+                  {confirmAction.message}
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex space-x-3">
+                <button
+                  onClick={cancelConfirmation}
+                  className="flex-1 bg-white hover:bg-gray-50 px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={executeConfirmedAction}
+                  className={`flex-1 px-4 py-2 text-white font-medium rounded-lg transition-colors ${
+                    confirmAction.type === 'hide'
+                      ? 'bg-red-500 hover:bg-red-600'
+                      : 'bg-green-500 hover:bg-green-600'
+                  }`}
+                >
+                  {confirmAction.type === 'hide' ? 'Hide' : 'Restore'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Transcript Modal */}
       {selectedConversation && (
