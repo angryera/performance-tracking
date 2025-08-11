@@ -44,17 +44,7 @@ export async function syncUsageDataToGoogleSheets() {
       usageData
     )
 
-    // Update global granted minutes
-    const globalSettings = await prisma.globalSettings.findFirst({
-      where: { id: 'default' }
-    })
-
-    if (globalSettings) {
-      await googleSheetsService.updateGrantedMinutes(
-        config.spreadsheetId,
-        globalSettings.grantedMinutes
-      )
-    }
+    console.log(usageData)
 
     console.log(`Successfully synced usage data for ${usageData.length} users to Google Sheets`)
     return true

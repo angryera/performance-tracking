@@ -149,6 +149,12 @@ export default function ManagerLayout({
                 Performance
               </Link>
               <Link
+                href="/manager/users"
+                className="hover:bg-slate-700 px-3 py-2 rounded-md font-medium text-slate-300 hover:text-white text-sm transition-colors"
+              >
+                Users
+              </Link>
+              <Link
                 href="/manager/config"
                 className="hover:bg-slate-700 px-3 py-2 rounded-md font-medium text-slate-300 hover:text-white text-sm transition-colors"
               >
@@ -244,6 +250,14 @@ export default function ManagerLayout({
           >
             <BarChart3 className="mr-3 w-5 h-5" />
             Performance
+          </Link>
+          <Link
+            href="/manager/users"
+            onClick={closeMobileMenu}
+            className="flex items-center hover:bg-slate-700 px-3 py-3 rounded-md font-medium text-slate-300 hover:text-white text-sm transition-colors"
+          >
+            <Users className="mr-3 w-5 h-5" />
+            Users
           </Link>
           <Link
             href="/manager/config"

@@ -6,7 +6,10 @@ export interface GoogleSheetRow {
   Last_Name: string
   Email: string
   Password: string
-  Minutes: string
+  Minutes: string        // Imported from Google Sheet
+  Used?: string         // Synced TO Google Sheet (not imported)
+  Remaining?: string    // Synced TO Google Sheet (not imported)
+  Total?: string        // Synced TO Google Sheet (not imported)
 }
 
 export interface GoogleSheetData {
@@ -57,7 +60,16 @@ export class GoogleSheetsService {
       const users = dataRows.map((row: any[]) => {
         const obj: any = {}
         headers.forEach((header: string, index: number) => {
-          obj[header] = row[index] || ''
+          // Only import data from Minutes field, set other fields to empty/default values
+          if (header === 'Minutes') {
+            obj[header] = row[index] || ''
+          } else if (header === 'Role' || header === 'First_Name' || header === 'Last_Name' || header === 'Email' || header === 'Password') {
+            // Keep essential user info fields
+            obj[header] = row[index] || ''
+          } else {
+            // Set other fields (Used, Remaining, Total) to empty/default values
+            obj[header] = ''
+          }
         })
         return obj as GoogleSheetRow
       })
@@ -121,6 +133,55 @@ export class GoogleSheetsService {
     }
   }
 
+  async clearUsageFields(spreadsheetId: string, range: string): Promise<void> {
+    try {
+      // Get the current data to find the usage columns
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range,
+      })
+
+      const rows = response.data.values
+      if (!rows || rows.length === 0) return
+
+      const headers = rows[0]
+      const usedColumnIndex = headers.findIndex((header: string) => header === 'Used')
+      const remainingColumnIndex = headers.findIndex((header: string) => header === 'Remaining')
+      const totalColumnIndex = headers.findIndex((header: string) => header === 'Total')
+
+      // Clear all usage fields (excluding header row)
+      const clearRanges: string[] = []
+
+      if (usedColumnIndex !== -1) {
+        const columnLetter = String.fromCharCode(65 + usedColumnIndex)
+        clearRanges.push(`${columnLetter}2:${columnLetter}${rows.length}`)
+      }
+
+      if (remainingColumnIndex !== -1) {
+        const columnLetter = String.fromCharCode(65 + remainingColumnIndex)
+        clearRanges.push(`${columnLetter}2:${columnLetter}${rows.length}`)
+      }
+
+      if (totalColumnIndex !== -1) {
+        const columnLetter = String.fromCharCode(65 + totalColumnIndex)
+        clearRanges.push(`${columnLetter}2:${columnLetter}${rows.length}`)
+      }
+
+      // Clear all usage fields
+      for (const clearRange of clearRanges) {
+        await this.sheets.spreadsheets.values.clear({
+          spreadsheetId,
+          range: clearRange,
+        })
+      }
+
+      console.log(`Cleared usage fields in ranges: ${clearRanges.join(', ')}`)
+    } catch (error) {
+      console.error('Error clearing usage fields:', error)
+      throw new Error('Failed to clear usage fields')
+    }
+  }
+
   async updateUserUsageData(spreadsheetId: string, range: string, usageData: UserUsageData[]): Promise<void> {
     try {
       // Get the current data to find column indices
@@ -135,7 +196,7 @@ export class GoogleSheetsService {
       const headers = rows[0]
       const emailColumnIndex = headers.findIndex((header: string) => header === 'Email')
       const usedColumnIndex = headers.findIndex((header: string) => header === 'Used')
-      const remainingColumnIndex = headers.findIndex((header: string) => header === 'Remaing')
+      const remainingColumnIndex = headers.findIndex((header: string) => header === 'Remaining')
       const totalColumnIndex = headers.findIndex((header: string) => header === 'Total')
 
       if (emailColumnIndex === -1) {
@@ -163,21 +224,21 @@ export class GoogleSheetsService {
         if (usedColumnIndex !== -1) {
           updates.push({
             range: `${usedColumnLetter}${userRowIndex + 1}`,
-            values: [[usage.usedMinutes.toString()]]
+            values: [[usage.usedMinutes]]
           })
         }
 
         if (remainingColumnIndex !== -1) {
           updates.push({
             range: `${remainingColumnLetter}${userRowIndex + 1}`,
-            values: [[usage.remainingMinutes.toString()]]
+            values: [[usage.remainingMinutes]]
           })
         }
 
         if (totalColumnIndex !== -1) {
           updates.push({
             range: `${totalColumnLetter}${userRowIndex + 1}`,
-            values: [[usage.totalMinutes.toString()]]
+            values: [[usage.totalMinutes]]
           })
         }
       }
@@ -187,7 +248,7 @@ export class GoogleSheetsService {
         await this.sheets.spreadsheets.values.batchUpdate({
           spreadsheetId,
           requestBody: {
-            valueInputOption: 'RAW',
+            valueInputOption: 'USER_ENTERED',
             data: updates
           }
         })
@@ -197,6 +258,23 @@ export class GoogleSheetsService {
     } catch (error) {
       console.error('Error updating user usage data:', error)
       throw new Error('Failed to update user usage data')
+    }
+  }
+
+  async syncUserUsageData(spreadsheetId: string, range: string, usageData: UserUsageData[]): Promise<void> {
+    try {
+      console.log('Starting sync operation...')
+      
+      // First, clear all existing usage fields
+      await this.clearUsageFields(spreadsheetId, range)
+      
+      // Then update with new usage data
+      await this.updateUserUsageData(spreadsheetId, range, usageData)
+      
+      console.log('Sync operation completed successfully')
+    } catch (error) {
+      console.error('Error during sync operation:', error)
+      throw new Error('Failed to sync user usage data')
     }
   }
 

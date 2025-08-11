@@ -46,16 +46,18 @@ export async function POST(request: NextRequest) {
 
       if (existingUser) {
         // Update existing user
+        const currentMinutes = existingUser.minutes || 0
+        const importedMinutes = parseInt(row.Minutes) || 0
+        const newTotalMinutes = currentMinutes + importedMinutes
+
         await prisma.user.update({
           where: { email: row.Email },
           data: {
             firstName: row.First_Name,
             lastName: row.Last_Name,
             role: row.Role as 'ADMIN' | 'REP',
-            // Only update minutes if they are available and greater than 0
-            ...(row.Minutes && parseInt(row.Minutes) > 0 && {
-              minutes: parseInt(row.Minutes)
-            }),
+            // Add imported minutes to existing minutes
+            minutes: newTotalMinutes,
             // Only update password if it's different
             ...(row.Password !== existingUser.password && {
               password: await bcrypt.hash(row.Password, 10)
@@ -99,7 +101,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { message: `Successfully imported ${sheetData.users.length} users from Google Sheets with ${sheetData.grantedMinutes} granted minutes. Minutes fields cleared and usage data synced.` },
+      { message: `Successfully imported ${sheetData.users.length} users from Google Sheets with ${sheetData.grantedMinutes} granted minutes. Minutes added to existing values, minutes fields cleared and usage data synced.` },
       { status: 200 }
     )
 
