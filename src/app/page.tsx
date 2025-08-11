@@ -3,7 +3,16 @@ import { BarChart3, Users, Phone } from 'lucide-react'
 
 export default function HomePage() {
   return (
-    <div className="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    // <div className="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <div
+      className="min-h-screen"
+      style={{
+        backgroundImage: "url('/VitlBackground.png')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
       <div className="mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16 container">
         <div className="mb-8 sm:mb-12 lg:mb-16 text-center">
           <h1 className="mb-3 sm:mb-4 px-2 font-bold text-gray-900 text-3xl sm:text-4xl lg:text-5xl">
@@ -46,7 +55,7 @@ export default function HomePage() {
               <div className="bg-green-100 p-2 sm:p-3 rounded-lg">
                 <Phone className="w-6 sm:w-8 h-6 sm:h-8 text-green-600" />
               </div>
-              <h2 className="ml-3 sm:ml-4 font-semibold text-xl sm:text-2xl">Sales Rep Portal</h2>
+              <h2 className="ml-3 sm:ml-4 font-semibold text-xl sm:text-2xl">LevelRep</h2>
             </div>
             <p className="mb-4 sm:mb-6 text-gray-600 text-sm sm:text-base">
               Login to access your performance dashboard and start conversations with AI-powered bots.

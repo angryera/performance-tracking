@@ -69,7 +69,7 @@ Start by saying "Hi there, how can I help you?
             {
                 id: "repmatch",
                 title: "Rep Match",
-                subtitle: "Compete with top sales representatives",
+                subtitle: "Find your next sales opportunity",
                 icon: "/repmatch.png",
                 gradient: "from-cyan-500 to-purple-600"
             }

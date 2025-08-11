@@ -5,6 +5,7 @@ import { Phone, User, Lock, AlertCircle, BarChart3, MessageSquare, TrendingUp, L
 import { Poppins, Quicksand } from 'next/font/google'
 import VAPIWidget from '@/components/VAPIWidget'
 import ClientOnly from '@/components/ClientOnly'
+import Image from 'next/image'
 
 const poppins = Poppins({
   weight: ['300', '400', '500', '600', '700'],
@@ -194,11 +195,17 @@ export default function RepPortal() {
       <div className={`${poppins.variable} ${quicksand.variable} flex justify-center items-center bg-gradient-to-br from-green-50 to-emerald-100 min-h-screen px-4 sm:px-6`} suppressHydrationWarning>
         <div className="space-y-6 sm:space-y-8 w-full max-w-md">
           <div className="text-center">
-            <div className="flex justify-center items-center bg-gradient-to-r from-green-500 to-emerald-600 shadow-lg mx-auto rounded-full w-14 sm:w-16 h-14 sm:h-16">
-              <Phone className="w-6 sm:w-8 h-6 sm:h-8 text-white" />
+            <div className="flex justify-center items-center mx-auto w-14 sm:w-16 h-14 sm:h-16">
+              <Image
+                src="/images/logo.png"
+                alt="Logo"
+                width={56} // match w-14
+                height={56} // match h-14
+                priority
+              />
             </div>
-            <h2 className={`${quicksand.className} mt-4 sm:mt-6 font-bold text-gray-900 text-2xl sm:text-3xl lg:text-4xl tracking-tight`}>
-              Sales Rep Portal
+            <h2 className={`${quicksand.className} mt-4 sm:mt-6 font-bold text-2xl sm:text-3xl lg:text-4xl tracking-tight`}>
+              LevelRep
             </h2>
             <p className={`${poppins.className} mt-2 sm:mt-3 text-gray-600 text-sm sm:text-base font-light px-4`}>
               Sign in to access your performance dashboard
@@ -258,16 +265,16 @@ export default function RepPortal() {
               </div>
             </div>
 
-              <button
-                type="submit"
-                disabled={isLoading}
+            <button
+              type="submit"
+              disabled={isLoading}
               className={`${quicksand.className} w-full disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transform transition-all duration-200 hover:scale-105 active:scale-95 text-sm sm:text-base shadow-lg`}
-              >
-                {isLoading ? 'Signing In...' : 'Sign In'}
-              </button>
+            >
+              {isLoading ? 'Signing In...' : 'Sign In'}
+            </button>
           </form>
         </div>
-      </div>
+      </div >
     )
   }
 
@@ -431,87 +438,87 @@ export default function RepPortal() {
 
             {/* VAPI Widget */}
             <ClientOnly>
-            <VAPIWidget
-              userId={currentUser?.id}
-              remainingSeconds={userUsage?.remainingSeconds || 0}
-              onTranscriptUpdate={(transcript) => {
-                console.log('Transcript updated:', transcript)
-              }}
-              onTimeLimitReached={() => {
-                console.log('Time limit reached, refreshing usage data...')
-                if (currentUser?.id) {
-                  fetchUserUsage(currentUser.id)
-                }
-              }}
-                onCallEnd={async (duration, transcript, mergedTranscript) => {
-                  console.log('Call ended:', { duration, transcript, mergedTranscript })
-
-                // Analyze transcript with AI first
-                let grade = null
-                let summary = null
-
-                setIsAnalyzing(true)
-                try {
-                  const analysisResponse = await fetch('/api/analyze-transcript', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ transcript }),
-                  })
-
-                  if (analysisResponse.ok) {
-                    const analysis = await analysisResponse.json()
-                    grade = analysis.grade
-                    summary = analysis.summary
-                    console.log('AI analysis completed:', analysis)
-                  } else {
-                    console.error('Failed to analyze transcript')
-                  }
-                } catch (error) {
-                  console.error('Error analyzing transcript:', error)
-                } finally {
-                  setIsAnalyzing(false)
-                }
-
-                  // Save conversation to database with AI analysis, accurate duration, and merged transcript
-                setIsSaving(true)
-                try {
-                  const response = await fetch('/api/conversations', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                      userId: currentUser?.id,
-                      transcript,
-                        mergedTranscript, // Add the merged transcript with speaker identification
-                      duration, // Now using accurate duration from timestamps
-                      grade,
-                      summary
-                    }),
-                  })
-
-                  if (response.ok) {
-                      console.log('Conversation saved successfully with AI analysis, accurate duration, and merged transcript:', duration)
-                      // Refresh conversations for all users (both admin and regular reps)
-                      fetchConversations()
-                  } else {
-                    console.error('Failed to save conversation')
-                  }
-                } catch (error) {
-                  console.error('Error saving conversation:', error)
-                } finally {
-                  setIsSaving(false)
-                  setShowSuccess(true)
-                  setTimeout(() => setShowSuccess(false), 3000) // Hide after 3 seconds
-                  // Refresh user usage data
+              <VAPIWidget
+                userId={currentUser?.id}
+                remainingSeconds={userUsage?.remainingSeconds || 0}
+                onTranscriptUpdate={(transcript) => {
+                  console.log('Transcript updated:', transcript)
+                }}
+                onTimeLimitReached={() => {
+                  console.log('Time limit reached, refreshing usage data...')
                   if (currentUser?.id) {
                     fetchUserUsage(currentUser.id)
                   }
-                }
-              }}
-            />
+                }}
+                onCallEnd={async (duration, transcript, mergedTranscript) => {
+                  console.log('Call ended:', { duration, transcript, mergedTranscript })
+
+                  // Analyze transcript with AI first
+                  let grade = null
+                  let summary = null
+
+                  setIsAnalyzing(true)
+                  try {
+                    const analysisResponse = await fetch('/api/analyze-transcript', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({ transcript }),
+                    })
+
+                    if (analysisResponse.ok) {
+                      const analysis = await analysisResponse.json()
+                      grade = analysis.grade
+                      summary = analysis.summary
+                      console.log('AI analysis completed:', analysis)
+                    } else {
+                      console.error('Failed to analyze transcript')
+                    }
+                  } catch (error) {
+                    console.error('Error analyzing transcript:', error)
+                  } finally {
+                    setIsAnalyzing(false)
+                  }
+
+                  // Save conversation to database with AI analysis, accurate duration, and merged transcript
+                  setIsSaving(true)
+                  try {
+                    const response = await fetch('/api/conversations', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        userId: currentUser?.id,
+                        transcript,
+                        mergedTranscript, // Add the merged transcript with speaker identification
+                        duration, // Now using accurate duration from timestamps
+                        grade,
+                        summary
+                      }),
+                    })
+
+                    if (response.ok) {
+                      console.log('Conversation saved successfully with AI analysis, accurate duration, and merged transcript:', duration)
+                      // Refresh conversations for all users (both admin and regular reps)
+                      fetchConversations()
+                    } else {
+                      console.error('Failed to save conversation')
+                    }
+                  } catch (error) {
+                    console.error('Error saving conversation:', error)
+                  } finally {
+                    setIsSaving(false)
+                    setShowSuccess(true)
+                    setTimeout(() => setShowSuccess(false), 3000) // Hide after 3 seconds
+                    // Refresh user usage data
+                    if (currentUser?.id) {
+                      fetchUserUsage(currentUser.id)
+                    }
+                  }
+                }}
+              />
             </ClientOnly>
           </div>
         ) : (
@@ -545,8 +552,8 @@ export default function RepPortal() {
               ) : (
                 <div className="space-y-3">
                   {conversations.map((conversation) => (
-                    <div 
-                      key={conversation.id} 
+                    <div
+                      key={conversation.id}
                       onClick={() => setSelectedConversation(conversation)}
                       className="hover:bg-gray-50 p-4 border border-gray-200 rounded-lg transition-colors cursor-pointer"
                     >
@@ -570,7 +577,7 @@ export default function RepPortal() {
                               {new Date(conversation.createdAt).toLocaleDateString()}
                             </span>
                           </div>
-                          
+
                           <p className="text-gray-600 text-sm">
                             Click to view full conversation details
                           </p>
@@ -578,14 +585,14 @@ export default function RepPortal() {
                         <div className="flex-shrink-0 ml-3">
                           <Eye className="w-4 h-4 text-gray-400" />
                         </div>
-                  </div>
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-                    </div>
-                  )}
+          </div>
+        )}
       </main>
 
       {/* Conversation Detail Modal */}
@@ -642,19 +649,18 @@ export default function RepPortal() {
                       </div>
                       <div>
                         <p className="font-medium text-blue-600 text-xs sm:text-sm">Grade</p>
-                        <p className={`text-base sm:text-lg font-bold ${
-                          selectedConversation.grade === 'A' ? 'text-green-900' :
+                        <p className={`text-base sm:text-lg font-bold ${selectedConversation.grade === 'A' ? 'text-green-900' :
                           selectedConversation.grade === 'B' ? 'text-blue-900' :
-                          selectedConversation.grade === 'C' ? 'text-yellow-900' :
-                          selectedConversation.grade === 'D' ? 'text-orange-900' :
-                          'text-red-900'
-                        }`}>
+                            selectedConversation.grade === 'C' ? 'text-yellow-900' :
+                              selectedConversation.grade === 'D' ? 'text-orange-900' :
+                                'text-red-900'
+                          }`}>
                           {selectedConversation.grade}
                         </p>
                       </div>
                     </div>
-                    </div>
-                  )}
+                  </div>
+                )}
 
                 <div className="sm:col-span-2 lg:col-span-1 bg-gradient-to-r from-purple-50 to-pink-50 p-3 sm:p-4 border border-purple-200 rounded-xl">
                   <div className="flex items-center">
@@ -704,7 +710,7 @@ export default function RepPortal() {
                     <h4 className="font-semibold text-gray-900 text-base sm:text-lg">Full Conversation Transcript</h4>
                   </div>
                 </div>
-                
+
                 <div className="bg-gray-50 border border-gray-200 rounded-xl overflow-hidden">
                   {/* Transcript Content */}
                   <div className="max-h-64 sm:max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
@@ -717,14 +723,14 @@ export default function RepPortal() {
                             return (
                               <div key={index} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
                                 <div className={`max-w-xs sm:max-w-sm lg:max-w-md px-3 py-2 rounded-2xl ${isUser
-                                  ? 'bg-green-500 text-white rounded-br-md' 
+                                  ? 'bg-green-500 text-white rounded-br-md'
                                   : 'bg-gray-200 text-gray-800 rounded-bl-md'
-                                }`}>
+                                  }`}>
                                   <div className="flex items-center space-x-2 mb-1">
                                     <span className={`text-xs font-medium px-2 py-1 rounded-full ${isUser
-                                      ? 'bg-green-400 bg-opacity-30 text-white' 
+                                      ? 'bg-green-400 bg-opacity-30 text-white'
                                       : 'bg-gray-300 text-gray-700'
-                                    }`}>
+                                      }`}>
                                       {isUser ? 'Me' : 'AI'}
                                     </span>
                                   </div>
@@ -744,7 +750,7 @@ export default function RepPortal() {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Transcript Footer */}
                   <div className="bg-gray-100 px-3 sm:px-4 py-2 border-gray-200 border-t">
                     <div className="flex justify-between items-center text-gray-500 text-xs">
