@@ -83,12 +83,6 @@ export default function RepPortal() {
     }
   }, [])
 
-  // Debug userUsage changes
-  useEffect(() => {
-    console.log('🔍 userUsage changed:', userUsage)
-    console.log('🔍 VAPIWidget remainingSeconds:', userUsage?.remainingSeconds || 0)
-  }, [userUsage])
-
   // Auto-fetch conversations when switching to My Data tab
   useEffect(() => {
     if (activeTab === 'management' && currentUser && conversations.length === 0) {
