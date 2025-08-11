@@ -192,22 +192,28 @@ export default function RepPortal() {
 
   if (!isLoggedIn) {
     return (
-      <div className={`${poppins.variable} ${quicksand.variable} flex justify-center items-center bg-gradient-to-br from-green-50 to-emerald-100 min-h-screen px-4 sm:px-6`} suppressHydrationWarning>
+      //<div className={`${poppins.variable} ${quicksand.variable} flex justify-center items-center bg-gradient-to-br from-green-50 to-emerald-100 min-h-screen px-4 sm:px-6`} suppressHydrationWarning>
+      <div
+        className={`${poppins.variable} ${quicksand.variable} flex justify-center items-center bg-cover bg-center bg-no-repeat min-h-screen px-4 sm:px-6`}
+        style={{ backgroundImage: "url('/VitlBackground.png')" }}
+        suppressHydrationWarning
+>
         <div className="space-y-6 sm:space-y-8 w-full max-w-md">
           <div className="text-center">
             <div className="flex justify-center items-center mx-auto w-14 sm:w-16 h-14 sm:h-16">
               <Image
-                src="/images/logo.png"
+                //src="/images/VitlIcon.png"
+                src="/VitlIcon.png"
                 alt="Logo"
                 width={56} // match w-14
                 height={56} // match h-14
                 priority
               />
             </div>
-            <h2 className={`${quicksand.className} mt-4 sm:mt-6 font-bold text-2xl sm:text-3xl lg:text-4xl tracking-tight`}>
+            <h2 className={`${quicksand.className} mt-4 sm:mt-6 font-bold text-2xl sm:text-3xl lg:text-4xl tracking-tight !text-white`}>
               LevelRep
             </h2>
-            <p className={`${poppins.className} mt-2 sm:mt-3 text-gray-600 text-sm sm:text-base font-light px-4`}>
+            <p className={`${poppins.className} mt-2 sm:mt-3 !text-white text-sm sm:text-base font-light px-4`}>
               Sign in to access your performance dashboard
             </p>
           </div>
@@ -225,11 +231,11 @@ export default function RepPortal() {
           <form className="space-y-4 sm:space-y-6 mt-6 sm:mt-8" onSubmit={handleLogin}>
             <div className="space-y-4 sm:space-y-6">
               <div>
-                <label htmlFor="email" className={`${poppins.className} block font-medium text-gray-700 text-sm mb-2`}>
+                <label htmlFor="email" className={`${poppins.className} block font-medium !text-white text-sm mb-2`}>
                   Email Address
                 </label>
                 <div className="relative">
-                  <User className="top-1/2 left-3 sm:left-4 absolute w-4 sm:w-5 h-4 sm:h-5 text-gray-400 -translate-y-2 transform" />
+                  <User className="top-1/2 left-3 sm:left-4 absolute w-4 sm:w-5 h-4 sm:h-5 !text-white -translate-y-2 transform" />
                   <input
                     id="email"
                     name="email"
@@ -245,7 +251,7 @@ export default function RepPortal() {
               </div>
 
               <div>
-                <label htmlFor="password" className={`${poppins.className} block font-medium text-gray-700 text-sm mb-2`}>
+                <label htmlFor="password" className={`${poppins.className} block font-medium !text-white text-sm mb-2`}>
                   Password
                 </label>
                 <div className="relative">
@@ -279,16 +285,28 @@ export default function RepPortal() {
   }
 
   return (
-    <div className={`${poppins.variable} ${quicksand.className} bg-gradient-to-br from-green-50 to-emerald-100 min-h-screen`} suppressHydrationWarning>
+    // <div className={`${poppins.variable} ${quicksand.className} bg-gradient-to-br from-green-50 to-emerald-100 min-h-screen`} suppressHydrationWarning>
+    <div
+      className={`${poppins.variable} ${quicksand.className} bg-cover bg-center bg-no-repeat min-h-screen`}
+      style={{ backgroundImage: "url('/VitlBackground.png')" }}
+      suppressHydrationWarning>
       {/* Header */}
       <header className="z-50 relative bg-white shadow-lg border-gray-200 border-b">
         <div className="mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="flex justify-between items-center h-14 sm:h-16">
             <div className="flex items-center">
               <div className="flex items-center">
-                <Phone className="mr-2 sm:mr-3 w-6 sm:w-7 h-6 sm:h-7 text-green-600" />
-                <span className={`${quicksand.className} font-semibold text-gray-900 text-lg sm:text-xl`}>
-                  Sales Rep Portal
+                {/* <Phone className="mr-2 sm:mr-3 w-6 sm:w-7 h-6 sm:h-7 text-green-600" /> */}
+                <Image
+                  src="/VitlIconBlack.png"
+                  alt="Vitl Icon"
+                  width={28} // matches w-7
+                  height={28} // matches h-7
+                  className="mr-2 sm:mr-3"
+                  priority
+                />
+                <span className={`${quicksand.className} font-semibold !text-black text-lg sm:text-xl`}>
+                  LevelRep
                 </span>
               </div>
             </div>
@@ -339,7 +357,35 @@ export default function RepPortal() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="mx-auto px-4 sm:px-6 lg:px-8 pt-6 max-w-7xl">
+      {/* Tab Navigation */}
+        <div className="mx-auto px-4 sm:px-6 lg:px-8 pt-6 max-w-7xl">
+          <div className="border-gray-200 border-b">
+            <nav className="flex space-x-8 -mb-px">
+              <button
+                onClick={() => setActiveTab('dashboard')}
+                className={`py-2 px-1 border-b-2 text-sm ${
+                  activeTab === 'dashboard'
+                    ? 'border-white text-white font-bold'
+                    : 'border-transparent text-white/70 font-medium hover:text-white hover:border-white/50'
+                }`}
+              >
+                Dashboard
+              </button>
+              <button
+                onClick={() => setActiveTab('management')}
+                className={`py-2 px-1 border-b-2 text-sm ${
+                  activeTab === 'management'
+                    ? 'border-white text-white font-bold'
+                    : 'border-transparent text-white/70 font-medium hover:text-white hover:border-white/50'
+                }`}
+              >
+                My Data
+              </button>
+            </nav>
+          </div>
+        </div>
+
+      {/* <div className="mx-auto px-4 sm:px-6 lg:px-8 pt-6 max-w-7xl">
         <div className="border-gray-200 border-b">
           <nav className="flex space-x-8 -mb-px">
             <button
@@ -362,7 +408,7 @@ export default function RepPortal() {
             </button>
           </nav>
         </div>
-      </div>
+      </div> */}
 
       {/* Main Content */}
       <main className="mx-auto px-4 sm:px-6 lg:px-8 py-6 max-w-7xl">

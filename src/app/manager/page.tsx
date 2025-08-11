@@ -222,16 +222,21 @@ export default function ManagerDashboard() {
 
   if (!isLoggedIn) {
     return (
-      <div className={`${poppins.variable} ${quicksand.variable} flex justify-center items-center bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen px-4 sm:px-6`} suppressHydrationWarning>
+      // <div className={`${poppins.variable} ${quicksand.variable} flex justify-center items-center bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen px-4 sm:px-6`} suppressHydrationWarning>
+      <div
+        className={`${poppins.variable} ${quicksand.variable} flex justify-center items-center bg-cover bg-center bg-no-repeat min-h-screen px-4 sm:px-6`}
+        style={{ backgroundImage: "url('/VitlBackground.png')" }}
+        suppressHydrationWarning
+      >
         <div className="space-y-6 sm:space-y-8 w-full max-w-md">
           <div className="text-center">
             <div className="flex justify-center items-center bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg mx-auto rounded-full w-14 sm:w-16 h-14 sm:h-16">
               <BarChart3 className="w-6 sm:w-8 h-6 sm:h-8 text-white" />
             </div>
-            <h2 className={`${quicksand.className} mt-4 sm:mt-6 font-bold text-gray-900 text-2xl sm:text-3xl lg:text-4xl tracking-tight`}>
+            <h2 className={`${quicksand.className} mt-4 sm:mt-6 font-bold !text-white text-2xl sm:text-3xl lg:text-4xl tracking-tight`}>
               Manager Portal
             </h2>
-            <p className={`${poppins.className} mt-2 sm:mt-3 text-gray-600 text-sm sm:text-base font-light px-4`}>
+            <p className={`${poppins.className} mt-2 sm:mt-3 !text-white text-sm sm:text-base font-light px-4`}>
               {hasAdmin === false ? 'Set up your first admin user' : 'Sign in to access the manager dashboard'}
             </p>
           </div>
@@ -280,7 +285,7 @@ export default function ManagerDashboard() {
             <form className="space-y-4 sm:space-y-6 mt-6 sm:mt-8" onSubmit={handleLogin}>
               <div className="space-y-4 sm:space-y-6">
                 <div>
-                  <label htmlFor="email" className={`${poppins.className} block font-medium text-gray-700 text-sm mb-2`}>
+                  <label htmlFor="email" className={`${poppins.className} block font-medium !text-white text-sm mb-2`}>
                     Email Address
                   </label>
                   <div className="relative">
@@ -300,7 +305,7 @@ export default function ManagerDashboard() {
                 </div>
 
                 <div>
-                  <label htmlFor="password" className={`${poppins.className} block font-medium text-gray-700 text-sm mb-2`}>
+                  <label htmlFor="password" className={`${poppins.className} block font-medium !text-white text-sm mb-2`}>
                     Password
                   </label>
                   <div className="relative">
