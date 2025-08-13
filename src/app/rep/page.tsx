@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Phone, User, Lock, AlertCircle, BarChart3, MessageSquare, TrendingUp, LogOut, Eye, EyeOff, CheckCircle } from 'lucide-react'
+import { AlertCircle, BarChart3, Eye, Lock, LogOut, MessageSquare, Phone, TrendingUp, User } from 'lucide-react'
 import { Poppins, Quicksand } from 'next/font/google'
-import VAPIWidget from '@/components/VAPIWidget'
-import ClientOnly from '@/components/ClientOnly'
 import Image from 'next/image'
+import { useEffect, useState } from 'react'
+
+import CallWidget from '@/components/CallWidget'
+import ClientOnly from '@/components/ClientOnly'
 
 const poppins = Poppins({
   weight: ['300', '400', '500', '600', '700'],
@@ -473,7 +474,7 @@ export default function RepPortal() {
 
             {/* VAPI Widget */}
             <ClientOnly>
-              <VAPIWidget
+              <CallWidget
                 remainingSeconds={userUsage?.remainingSeconds || 0}
                 onTranscriptUpdate={(transcript) => {
                   console.log('Transcript updated:', transcript)

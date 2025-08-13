@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react'
 
-export const AnamVideoWidget = ({
+const AnamVideoWidget = ({
     config,
     endAnamChat,
     videoRef,
@@ -16,7 +16,7 @@ export const AnamVideoWidget = ({
     inputRef,
     formatTimestamp,
     getMessageAge,
-}:{
+}: {
     config: any,
     endAnamChat: () => void,
     videoRef: React.RefObject<HTMLVideoElement>,
@@ -37,7 +37,7 @@ export const AnamVideoWidget = ({
     useEffect(() => {
         // Disable body scroll
         document.body.style.overflow = 'hidden'
-        
+
         // Re-enable body scroll when component unmounts
         return () => {
             document.body.style.overflow = 'unset'
@@ -228,3 +228,5 @@ export const AnamVideoWidget = ({
         </div>
     </div>
 }
+
+export default AnamVideoWidget;
