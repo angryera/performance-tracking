@@ -54,10 +54,10 @@ export default function VAPIWidget({
   const [isSendingMessage, setIsSendingMessage] = useState(false)
   const [isAssistantSpeaking, setIsAssistantSpeaking] = useState(false)
   const [messageIdCounter, setMessageIdCounter] = useState(0)
-  const [messageTimestampMap, setMessageTimestampMap] = useState<Record<string, string>>({})
   const videoRef = useRef<HTMLVideoElement>(null)
   const messageListRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const conversationHistoryRef = useRef<any[]>([])
 
   const showErrorToast = (message: string) => {
     setError(message)
@@ -414,16 +414,33 @@ export default function VAPIWidget({
           messages.forEach((msg, index) => {
             console.log(`📝 Message ${index}:`, {
               id: msg.id,
-              role: msg.role || msg.sender,
-              content: msg.content || msg.text || msg.message,
+              role: msg.role,
+              content: msg.content,
               hasId: !!msg.id
             })
           })
           
-          // Use the merge function to handle timestamps and deduplication
-          const mergedHistory = mergeConversationHistory(conversationHistory, messages)
-          console.log('📝 Merged conversation history:', mergedHistory)
-          setConversationHistory(mergedHistory)
+          console.log("🔍 Current conversation history ref:", conversationHistoryRef.current)
+
+          const newMessages = messages.map((msg, index) => {
+            if (index >= conversationHistoryRef.current.length) {
+              return {
+                ...msg,
+                timestamp: new Date().toISOString()
+              }
+            } else {
+              return {
+                ...msg,
+                timestamp: conversationHistoryRef.current[index].timestamp
+              }
+            }
+          })
+
+          // Update both ref and state
+          conversationHistoryRef.current = newMessages
+          setConversationHistory(newMessages)
+          
+          console.log("✅ Updated conversation history:", newMessages)
         })
 
         if (videoRef.current) {
@@ -445,7 +462,7 @@ export default function VAPIWidget({
               id: userMessageId,
               role: 'user',
               content: initialMessage,
-              timestamp: getMessageTimestamp(userMessageId),
+              timestamp: new Date().toISOString(),
               source: 'user'
             }
             setUserMessages([userMessage])
@@ -489,7 +506,7 @@ export default function VAPIWidget({
     setUserMessages([])
     setUserInput('')
     setIsAssistantSpeaking(false)
-    setMessageTimestampMap({})
+    conversationHistoryRef.current = []
     activeModeRef.current = null
   }
 
@@ -506,7 +523,7 @@ export default function VAPIWidget({
         id: userMessageId,
         role: 'user',
         content: messageText,
-        timestamp: getMessageTimestamp(userMessageId),
+        timestamp: new Date().toISOString(),
         source: 'user'
       }
 
@@ -761,7 +778,7 @@ export default function VAPIWidget({
         behavior: 'smooth'
       })
     }
-    
+
     // Focus the input box after scrolling
     setTimeout(() => {
       if (inputRef.current) {
@@ -776,13 +793,13 @@ export default function VAPIWidget({
     const timer = setTimeout(() => {
       scrollToBottom()
     }, 100)
-    
+
     return () => clearTimeout(timer)
   }, [conversationHistory, userMessages])
 
   // Combine and sort all messages by timestamp
   const getAllMessages = () => {
-    const allMessages = [...userMessages, ...conversationHistory]
+    const allMessages = [...userMessages, ...conversationHistoryRef.current]
     
     // Sort by timestamp, ensuring all messages have valid timestamps
     const sortedMessages = allMessages
@@ -823,112 +840,13 @@ export default function VAPIWidget({
       const now = new Date()
       const diffMs = now.getTime() - messageTime.getTime()
       const diffSeconds = Math.floor(diffMs / 1000)
-      
+
       if (diffSeconds < 60) return `${diffSeconds}s ago`
       if (diffSeconds < 3600) return `${Math.floor(diffSeconds / 60)}m ago`
       return `${Math.floor(diffSeconds / 3600)}h ago`
     } catch (error) {
       return 'Unknown'
     }
-  }
-
-  // Helper function to check if messages are similar (for deduplication)
-  const areMessagesSimilar = (msg1: any, msg2: any) => {
-    return msg1.content === msg2.content && 
-           msg1.role === msg2.role && 
-           msg1.source === msg2.source
-  }
-
-  // Helper function to merge conversation history with new messages
-  const mergeConversationHistory = (existingHistory: any[], newMessages: any[]) => {
-    const merged = [...existingHistory]
-    
-    newMessages.forEach(newMsg => {
-      const normalizedNewMsg = {
-        id: newMsg.id || `anam_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        role: newMsg.role || (newMsg.sender === 'user' ? 'user' : 'assistant'),
-        content: newMsg.content || newMsg.text || newMsg.message || 'Message content unavailable',
-        source: 'anam',
-        endOfSpeech: newMsg.endOfSpeech || false
-      }
-      
-      // Use message ID for deduplication if available
-      if (newMsg.id) {
-        const existingIndex = merged.findIndex(existing => existing.id === newMsg.id)
-        
-        if (existingIndex !== -1) {
-          // Update existing message if needed (e.g., endOfSpeech flag, content updates)
-          const existingMessage = merged[existingIndex]
-          merged[existingIndex] = { 
-            ...existingMessage, 
-            ...normalizedNewMsg,
-            timestamp: existingMessage.timestamp // Preserve existing timestamp
-          }
-          console.log('🔄 Updated existing message by ID:', newMsg.id, merged[existingIndex])
-        } else {
-          // Add new message with its ID and get/create timestamp
-          const timestamp = getMessageTimestamp(newMsg.id)
-          merged.push({
-            ...normalizedNewMsg,
-            timestamp
-          })
-          console.log('🆕 Added new message with ID:', newMsg.id, timestamp)
-        }
-      } else {
-        // Fallback to content-based deduplication if no ID
-        const existingIndex = merged.findIndex(existing => areMessagesSimilar(existing, normalizedNewMsg))
-        
-        if (existingIndex !== -1) {
-          // Update existing message if needed
-          const existingMessage = merged[existingIndex]
-          merged[existingIndex] = { 
-            ...existingMessage, 
-            ...normalizedNewMsg,
-            timestamp: existingMessage.timestamp // Preserve existing timestamp
-          }
-          console.log('🔄 Updated existing message by content:', merged[existingIndex])
-        } else {
-          // Add new message with generated timestamp
-          const generatedId = `anam_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-          const timestamp = getMessageTimestamp(generatedId)
-          merged.push({
-            ...normalizedNewMsg,
-            id: generatedId,
-            timestamp
-          })
-          console.log('🆕 Added new message by content with generated ID:', generatedId, timestamp)
-        }
-      }
-    })
-    
-    return merged
-  }
-
-  // Helper function to get or create timestamp for a message
-  const getMessageTimestamp = (messageId: string, fallbackTimestamp?: string) => {
-    // Check if we already have a timestamp for this message ID
-    if (messageTimestampMap[messageId]) {
-      return messageTimestampMap[messageId]
-    }
-    
-    // Create new timestamp and store it
-    const newTimestamp = fallbackTimestamp || new Date().toISOString()
-    setMessageTimestampMap(prev => ({
-      ...prev,
-      [messageId]: newTimestamp
-    }))
-    
-    console.log('⏰ Created timestamp for message ID:', messageId, newTimestamp)
-    return newTimestamp
-  }
-
-  // Helper function to update timestamp for existing message
-  const updateMessageTimestamp = (messageId: string, newTimestamp: string) => {
-    setMessageTimestampMap(prev => ({
-      ...prev,
-      [messageId]: newTimestamp
-    }))
-    console.log('⏰ Updated timestamp for message ID:', messageId, newTimestamp)
   }
 
   return (
@@ -1314,17 +1232,15 @@ export default function VAPIWidget({
                     <div className="space-y-3">
                       {getAllMessages().map((message, index) => (
                         <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[85%] px-3 py-2 rounded-xl shadow-sm ${
-                            message.role === 'user'
-                              ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white'
-                              : 'bg-gray-700 text-gray-200 border border-gray-500'
-                          }`}>
+                          <div className={`max-w-[85%] px-3 py-2 rounded-xl shadow-sm ${message.role === 'user'
+                            ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white'
+                            : 'bg-gray-700 text-gray-200 border border-gray-500'
+                            }`}>
                             <div className="flex items-start space-x-2">
-                              <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                                message.role === 'user'
-                                  ? 'bg-white bg-opacity-20 text-white'
-                                  : 'bg-gray-500 text-gray-300'
-                              }`}>
+                              <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${message.role === 'user'
+                                ? 'bg-white bg-opacity-20 text-white'
+                                : 'bg-gray-500 text-gray-300'
+                                }`}>
                                 {message.role === 'user' ? 'U' : 'A'}
                               </div>
                               <div className="flex-1">
@@ -1374,11 +1290,10 @@ export default function VAPIWidget({
                     <button
                       onClick={sendTextMessage}
                       disabled={!userInput.trim() || isSendingMessage}
-                      className={`px-4 py-1 rounded-lg font-medium transition-all shadow-sm ${
-                        userInput.trim() && !isSendingMessage
-                          ? 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white hover:scale-105 active:scale-95'
-                          : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                      }`}
+                      className={`px-4 py-1 rounded-lg font-medium transition-all shadow-sm ${userInput.trim() && !isSendingMessage
+                        ? 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white hover:scale-105 active:scale-95'
+                        : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                        }`}
                     >
                       {isSendingMessage ? (
                         <div className="flex items-center space-x-1">
@@ -1428,7 +1343,7 @@ export default function VAPIWidget({
               <div className="bg-gray-800 bg-opacity-50 px-2 py-1 rounded">
                 <div className="text-gray-400 text-xs">Last Update</div>
                 <div className="font-medium">
-                  {getAllMessages().length > 0 
+                  {getAllMessages().length > 0
                     ? formatTimestamp(getAllMessages()[getAllMessages().length - 1]?.timestamp || '')
                     : 'None'
                   }
