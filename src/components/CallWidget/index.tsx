@@ -3,14 +3,14 @@
 import { config } from '@/lib/config'
 import { formatDuration, formatTimestamp, getMessageAge } from '@/lib/utils'
 import { AnamEvent, createClient } from '@anam-ai/js-sdk'
-import { AlertCircle, Clock, Mic, MicOff, Phone, Play, Square } from 'lucide-react'
+import { AlertCircle, Clock, Mic, MicOff, Phone, Play, Square, MessageSquare } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import AnamVideoWidget from './AnamVideoWidget'
-import { Instructions } from './Instructions'
 import { ConnectingOverlay, ProcessingOverlay } from './Overlays'
 import ErrorToast from './Toast'
 import VAPISessionTypeSelector from './VAPISessionTypeSelector'
+import VAPIChatWidget from './VAPIChatWidget'
 
 import createSessionToken from './helpers/AnamSessionToken'
 import scrollToBottomHelper from './helpers/ScrollToBottom'
@@ -66,8 +66,19 @@ export default function CallWidget({
   const [showVapiSessionTypeSelector, setShowVapiSessionTypeSelector] = useState(false)
   const [selectedVapiSessionType, setSelectedVapiSessionType] = useState<'chat' | 'talk'>('talk')
   const [pendingVapiMode, setPendingVapiMode] = useState<string>('')
+  const [isVapiChatActive, setIsVapiChatActive] = useState(false)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const messageListRef = useRef<HTMLDivElement>(null)
+
+  // Mock functions for VAPI Chat integration (these would be passed from parent component)
+  const currentUser = { id: 'mock-user-id' } // This should come from parent
+  const fetchConversations = () => {
+    console.log('Mock fetchConversations called')
+    // This should be implemented by parent component
+  }
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const conversationHistoryRef = useRef<any[]>([])
 
@@ -324,51 +335,74 @@ export default function CallWidget({
   }
 
   const startVapiCall = async () => {
-    if (!vapi) {
-      showErrorToast('VAPI not initialized. Please refresh the page and try again.')
-      return
-    }
-
     if (!pendingVapiMode) {
       showErrorToast('No VAPI mode selected. Please try again.')
       return
     }
 
-    setIsConnecting(true)
     const mode = pendingVapiMode
     const assistantId = config.vapi.assistants[mode as keyof typeof config.vapi.assistants]
 
-    try {
-      // For VAPI calls, we need to get user media for mute functionality
-      // even though VAPI handles the call audio internally
-      await getUserMedia()
+    // Handle different session types
+    if (selectedVapiSessionType === 'chat') {
+      // Start VAPI chat mode
+      setIsVapiChatActive(true)
+      setIsCallActive(false) // Ensure voice call is not active
+      activeModeRef.current = mode
 
-      // Start the call and get the call ID
-      const call = await vapi.start(assistantId)
-
-      // Store the call object reference for mute functionality
-      currentCallRef.current = call
-
-      // Set the call ID if available
-      if (call?.id) {
-        setCurrentCallId(call.id)
-        currentCallIdRef.current = call.id
-      } else {
-        // Fallback: generate a unique call ID
-        const fallbackId = `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-        setCurrentCallId(fallbackId)
-        currentCallIdRef.current = fallbackId
-      }
-
-      // Set start time
+      // Set start time for chat
       const startTime = new Date()
       setCallStartTime(startTime)
       callStartTimeRef.current = startTime
 
-    } catch (error) {
-      console.error('Error starting call:', error)
-      setError('Failed to start call. Please try again.')
+      // Reset transcript state for new chat
+      setTranscript([])
+      transcriptRef.current = []
+
       setIsConnecting(false)
+      return
+    } else {
+      // Start VAPI voice call mode
+      if (!vapi) {
+        showErrorToast('VAPI not initialized. Please refresh the page and try again.')
+        return
+      }
+
+      setIsConnecting(true)
+      setIsVapiChatActive(false) // Ensure chat mode is not active
+
+      try {
+        // For VAPI calls, we need to get user media for mute functionality
+        // even though VAPI handles the call audio internally
+        await getUserMedia()
+
+        // Start the call and get the call ID
+        const call = await vapi.start(assistantId)
+
+        // Store the call object reference for mute functionality
+        currentCallRef.current = call
+
+        // Set the call ID if available
+        if (call?.id) {
+          setCurrentCallId(call.id)
+          currentCallIdRef.current = call.id
+        } else {
+          // Fallback: generate a unique call ID
+          const fallbackId = `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          setCurrentCallId(fallbackId)
+          currentCallIdRef.current = fallbackId
+        }
+
+        // Set start time
+        const startTime = new Date()
+        setCallStartTime(startTime)
+        callStartTimeRef.current = startTime
+
+      } catch (error) {
+        console.error('Error starting call:', error)
+        setError('Failed to start call. Please try again.')
+        setIsConnecting(false)
+      }
     }
   }
 
@@ -389,7 +423,10 @@ export default function CallWidget({
 
     if (activeModeRef.current === 'sell') {
       endAnamChat()
-    } else if (vapi) {
+    } else if (isVapiChatActive) {
+      // End VAPI chat mode
+      setIsVapiChatActive(false)
+    } else if (vapi && isCallActive) {
       try {
         vapi.stop()
       } catch (error) {
@@ -402,6 +439,7 @@ export default function CallWidget({
     setShowVapiSessionTypeSelector(false)
     setSelectedVapiSessionType('talk')
     setPendingVapiMode('')
+    setIsCallActive(false)
   }
 
   const startAnamChat = async () => {
@@ -665,59 +703,83 @@ export default function CallWidget({
               }
             </button>
           ) : (
-            <div className="flex justify-center items-center space-x-4">
-              <div className="font-semibold text-gray-900 text-lg">
-                {formatDuration(displayDuration)}
+            <>
+              {/* Mode Indicator */}
+              <div className="mb-4">
+                <div className="inline-flex items-center bg-blue-100 px-3 py-1 rounded-full font-medium text-blue-800 text-sm">
+                  {isVapiChatActive ? (
+                    <>
+                      <MessageSquare className="mr-2 w-4 h-4" />
+                      Chat Mode Active
+                    </>
+                  ) : (
+                    <>
+                      <Phone className="mr-2 w-4 h-4" />
+                      Voice Call Active
+                    </>
+                  )}
+                </div>
               </div>
 
-              {/* Mute Button */}
-              <button
-                onClick={toggleMute}
-                disabled={isMuteProcessing}
-                className={`inline-flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${isMuted
-                  ? 'bg-red-500 hover:bg-red-600 text-white'
-                  : 'bg-gray-500 hover:bg-gray-600 text-white'
-                  } ${isMuteProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                title={`${isMuted ? 'Unmute' : 'Mute'} microphone (${activeModeRef.current || 'unknown'} mode)`}
-              >
-                {isMuteProcessing ? (
-                  <>
-                    <div className="mr-2 border-2 border-white border-t-transparent rounded-full w-4 h-4 animate-spin"></div>
-                    {isMuted ? 'Unmuting...' : 'Muting...'}
-                  </>
-                ) : isMuted ? (
-                  <>
-                    <MicOff className="mr-2 w-4 h-4" />
-                    Muted
-                  </>
-                ) : (
-                  <>
-                    <Mic className="mr-2 w-4 h-4" />
-                    Mute
-                  </>
-                )}
-              </button>
+              <div className="flex justify-center items-center space-x-4">
+                <div className="font-semibold text-gray-900 text-lg">
+                  {formatDuration(displayDuration)}
+                </div>
 
-              <button
-                onClick={endCall}
-                className="inline-flex items-center bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg font-medium text-white transition-colors"
-              >
-                <Square className="mr-2 w-4 h-4" />
-                End Call
-              </button>
-            </div>
+                {/* Mute Button - Only show when NOT in chat mode */}
+                {!isVapiChatActive && (
+                  <button
+                    onClick={toggleMute}
+                    disabled={isMuteProcessing}
+                    className={`inline-flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${isMuted
+                      ? 'bg-red-500 hover:bg-red-600 text-white'
+                      : 'bg-gray-500 hover:bg-gray-600 text-white'
+                      } ${isMuteProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title={`${isMuted ? 'Unmute' : 'Mute'} microphone (${activeModeRef.current || 'unknown'} mode)`}
+                  >
+                    {isMuteProcessing ? (
+                      <>
+                        <div className="mr-2 border-2 border-white border-t-transparent rounded-full w-4 h-4 animate-spin"></div>
+                        {isMuted ? 'Unmuting...' : 'Muting...'}
+                      </>
+                    ) : isMuted ? (
+                      <>
+                        <MicOff className="mr-2 w-4 h-4" />
+                        Muted
+                      </>
+                    ) : (
+                      <>
+                        <Mic className="mr-2 w-4 h-4" />
+                        Mute
+                      </>
+                    )}
+                  </button>
+                )}
+
+                <button
+                  onClick={endCall}
+                  className="inline-flex items-center bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg font-medium text-white transition-colors"
+                >
+                  <Square className="mr-2 w-4 h-4" />
+                  {isVapiChatActive ? 'End Chat' : 'End Call'}
+                </button>
+              </div>
+            </>
           )}
         </div>
 
-        <VAPIWidget
-          isCallActive={isCallActive}
-          transcript={transcript}
-          isMuted={isMuted}
-          isMuteProcessing={isMuteProcessing}
-          getMergedTranscript={() => mergedTranscript}
-          setTranscript={setTranscript}
-          isSpeaking={isSpeaking}
-        />
+        {/* VAPI Voice Call Widget - Only show when NOT in chat mode */}
+        {!isVapiChatActive && isCallActive && (
+          <VAPIWidget
+            isCallActive={isCallActive}
+            transcript={transcript}
+            isMuted={isMuted}
+            isMuteProcessing={isMuteProcessing}
+            getMergedTranscript={() => mergedTranscript}
+            setTranscript={setTranscript}
+            isSpeaking={isSpeaking}
+          />
+        )}
       </div>
 
       {/* Anam Video Assistant Modal */}
@@ -741,6 +803,178 @@ export default function CallWidget({
         />
       )}
 
+      {/* VAPI Voice Call Modal */}
+      {!isVapiChatActive && isCallActive && (
+        <div className="z-50 fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 backdrop-blur-sm !mt-0 p-4">
+          <div className="bg-gray-800 shadow-2xl p-4 sm:p-6 lg:p-8 border border-gray-700 rounded-2xl lg:rounded-3xl w-full max-w-6xl h-[700px] sm:h-[800px] sm:max-h-[80vh]">
+            <div className="flex flex-row justify-between items-start sm:items-center gap-4 mb-4 sm:mb-6 lg:mb-8">
+              <div className="flex items-center space-x-2 sm:space-x-4">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="bg-blue-500 rounded-full w-3 sm:w-4 h-3 sm:h-4 animate-pulse"></div>
+                  <h3 className="font-bold text-white text-lg sm:text-xl lg:text-3xl">
+                    {activeModeRef.current ? `${activeModeRef.current.charAt(0).toUpperCase() + activeModeRef.current.slice(1)} Voice Call` : 'VAPI Voice Call'}
+                  </h3>
+                </div>
+                <div className="flex items-center space-x-2 bg-gray-700 px-2 py-1 rounded-full">
+                  <div className="bg-green-500 rounded-full w-2 h-2 animate-pulse"></div>
+                  <span className="sm:hidden font-medium text-green-400 text-xs sm:text-sm">Live</span>
+                  <span className="hidden sm:block font-medium text-green-400 text-xs sm:text-sm">Live Session</span>
+                </div>
+              </div>
+              <button
+                onClick={endCall}
+                className="bg-red-500 hover:bg-red-600 shadow-lg px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-medium text-white text-sm sm:text-base hover:scale-105 active:scale-95 transition-all duration-200"
+              >
+                <div className="flex items-center space-x-1 sm:space-x-2">
+                  <svg className="w-4 sm:w-5 h-4 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  <span className="hidden sm:inline">End Call</span>
+                  <span className="sm:hidden">End</span>
+                </div>
+              </button>
+            </div>
+
+            {/* Voice Call Interface */}
+            <div className="flex flex-col h-[500px] sm:h-[550px] lg:h-[600px]">
+              <div className="mb-3 sm:mb-4 lg:mb-6 text-center">
+                <h4 className="mb-1 sm:mb-2 font-semibold text-white text-base sm:text-lg lg:text-xl">Voice Call</h4>
+                <p className="hidden sm:block text-gray-300 text-xs sm:text-sm">Speak naturally with the AI assistant</p>
+              </div>
+
+              {/* Call Controls */}
+              <div className="flex justify-center items-center space-x-4 mb-4">
+                <div className="font-semibold text-white text-lg">
+                  {formatDuration(displayDuration)}
+                </div>
+
+                {/* Mute Button */}
+                <button
+                  onClick={toggleMute}
+                  disabled={isMuteProcessing}
+                  className={`inline-flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${isMuted
+                    ? 'bg-red-500 hover:bg-red-600 text-white'
+                    : 'bg-gray-500 hover:bg-gray-600 text-white'
+                    } ${isMuteProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  title={`${isMuted ? 'Unmute' : 'Mute'} microphone`}
+                >
+                  {isMuteProcessing ? (
+                    <>
+                      <div className="mr-2 border-2 border-white border-t-transparent rounded-full w-4 h-4 animate-spin"></div>
+                      {isMuted ? 'Unmuting...' : 'Muting...'}
+                    </>
+                  ) : isMuted ? (
+                    <>
+                      <MicOff className="mr-2 w-4 h-4" />
+                      Muted
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="mr-2 w-4 h-4" />
+                      Mute
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Transcript Display */}
+              <div className="flex-1 bg-gray-900 p-4 rounded-xl lg:rounded-2xl overflow-y-auto">
+                <VAPIWidget
+                  isCallActive={isCallActive}
+                  transcript={transcript}
+                  isMuted={isMuted}
+                  isMuteProcessing={isMuteProcessing}
+                  getMergedTranscript={() => mergedTranscript}
+                  setTranscript={setTranscript}
+                  isSpeaking={isSpeaking}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VAPI Chat Modal */}
+      {isVapiChatActive && (
+        <VAPIChatWidget
+          assistantId={config.vapi.assistants[activeModeRef.current as keyof typeof config.vapi.assistants] || ''}
+          mode={activeModeRef.current || ''}
+          onTranscriptUpdate={(transcript) => {
+            console.log('VAPI Chat transcript updated:', transcript)
+          }}
+          onCallEnd={async (duration, transcript, mergedTranscript) => {
+            setIsVapiChatActive(false)
+            console.log('VAPI Chat ended:', { duration, transcript, mergedTranscript })
+
+            // Analyze transcript with AI first
+            let grade = null
+            let summary = null
+
+            setIsAnalyzing(true)
+            try {
+              const analysisResponse = await fetch('/api/analyze-transcript', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ transcript }),
+              })
+
+              if (analysisResponse.ok) {
+                const analysis = await analysisResponse.json()
+                grade = analysis.grade
+                summary = analysis.summary
+                console.log('AI analysis completed:', analysis)
+              } else {
+                console.error('Failed to analyze transcript')
+              }
+            } catch (error) {
+              console.error('Error analyzing transcript:', error)
+            } finally {
+              setIsAnalyzing(false)
+            }
+
+            // Save conversation to database with AI analysis
+            setIsSaving(true)
+            try {
+              const response = await fetch('/api/conversations', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  userId: currentUser?.id,
+                  transcript,
+                  mergedTranscript,
+                  duration,
+                  grade,
+                  summary
+                }),
+              })
+
+              if (response.ok) {
+                console.log('VAPI Chat conversation saved successfully with AI analysis')
+                // Refresh conversations for all users (both admin and regular reps)
+                fetchConversations()
+              } else {
+                console.error('Failed to save VAPI Chat conversation')
+              }
+            } catch (error) {
+              console.error('Error saving VAPI Chat conversation:', error)
+            } finally {
+              setIsSaving(false)
+              setShowSuccess(true)
+              setTimeout(() => setShowSuccess(false), 3000) // Hide after 3 seconds
+
+              // Refresh user usage data
+              if (currentUser?.id) {
+                fetchConversations()
+              }
+            }
+          }}
+        />
+      )}
+
       {/* Session Type Selector Modal */}
       {showVapiSessionTypeSelector && (
         <VAPISessionTypeSelector
@@ -759,13 +993,32 @@ export default function CallWidget({
       )}
 
       {/* Processing Spinner Overlay */}
-      {isProcessing && (
+      {(isProcessing || isAnalyzing) && (
         <ProcessingOverlay selectedMode={selectedMode} />
       )}
 
       {/* Error Toast */}
       {error && (
         <ErrorToast error={error} />
+      )}
+
+      {/* Success Message Overlay */}
+      {showSuccess && (
+        <div className="z-50 fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 backdrop-blur-sm !mt-0 p-4">
+          <div className="bg-white shadow-2xl p-6 sm:p-8 border border-gray-200 rounded-2xl w-full max-w-sm sm:max-w-md text-center">
+            <div className="flex justify-center items-center bg-green-100 mx-auto mb-4 sm:mb-6 rounded-full w-12 sm:w-16 h-12 sm:h-16">
+              <svg className="w-6 sm:w-8 h-6 sm:h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="mb-2 sm:mb-3 font-bold text-green-800 text-xl sm:text-2xl">
+              Chat Session Complete!
+            </h3>
+            <p className="text-green-700 text-base sm:text-lg">
+              Your VAPI chat conversation has been analyzed and saved successfully.
+            </p>
+          </div>
+        </div>
       )}
     </>
   )

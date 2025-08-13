@@ -470,8 +470,6 @@ export default function RepPortal() {
               </div>
             )}
 
-
-
             {/* VAPI Widget */}
             <ClientOnly>
               <CallWidget
