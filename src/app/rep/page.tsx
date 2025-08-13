@@ -474,7 +474,6 @@ export default function RepPortal() {
             {/* VAPI Widget */}
             <ClientOnly>
               <VAPIWidget
-                userId={currentUser?.id}
                 remainingSeconds={userUsage?.remainingSeconds || 0}
                 onTranscriptUpdate={(transcript) => {
                   console.log('Transcript updated:', transcript)

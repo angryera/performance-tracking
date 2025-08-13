@@ -1,109 +1,26 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { Phone, Play, Square, Mic, MicOff, AlertCircle, Clock, Volume2, VolumeX } from 'lucide-react'
 import { config } from '@/lib/config'
-import Vapi from '@vapi-ai/web'
 import { createClient } from '@anam-ai/js-sdk'
+import Vapi from '@vapi-ai/web'
+import { AlertCircle, Clock, Mic, MicOff, Phone, Play, Square, Volume2, VolumeX } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { ConnectingOverlay, ProcessingOverlay } from './components/Overlays'
+import { ErrorToast } from './components/Toast'
+import { Instructions } from './components/Instructions'
 
 interface VAPIWidgetProps {
-  userId?: string
   onTranscriptUpdate?: (transcript: string) => void
-  onCallEnd?: (duration: number, transcript: string, mergedTranscript: Array<{role: string, text: string}>) => void
+  onCallEnd?: (duration: number, transcript: string, mergedTranscript: Array<{ role: string, text: string }>) => void
   remainingSeconds?: number
   onTimeLimitReached?: () => void
 }
 
-// Audio visualization component
-const AudioVisualizer = ({ isActive, isSpeaking, isMuted, audioLevel = 0 }: { 
-  isActive: boolean, 
-  isSpeaking: boolean, 
-  isMuted: boolean,
-  audioLevel: number 
-}) => {
-  const bars = Array.from({ length: 20 }, (_, i) => i)
-  
-  return (
-    <div className="flex justify-center items-center space-x-1">
-      {bars.map((_, index) => {
-        // Create more varied and realistic bar heights using CSS transforms
-        const baseScale = isActive && !isMuted ? 0.3 : 0.1
-        
-        // Add some variation based on bar position and time (simplified for performance)
-        const timeVariation = isActive && !isMuted 
-          ? Math.sin((Date.now() * 0.002) + index * 0.2) * 0.2 + 0.8
-          : 0
-        
-        // Add position-based variation for more natural look
-        const positionVariation = isActive && !isMuted
-          ? Math.sin(index * 0.5) * 0.15 + 0.85
-          : 0
-        
-        const dynamicScale = isActive && !isMuted 
-          ? baseScale + 
-            (audioLevel * 0.7 * timeVariation * positionVariation) + 
-            (isSpeaking ? 0.2 : 0)
-          : baseScale
-        
-        const finalScale = Math.max(0.1, Math.min(1.5, dynamicScale))
-        
-        return (
-          <div
-            key={index}
-            className={`w-1 bg-gradient-to-t from-cyan-400 to-purple-500 rounded-full origin-bottom transition-transform duration-200 ease-out ${
-              isActive && !isMuted ? 'opacity-100' : 'opacity-30'
-            }`}
-            style={{ 
-              height: '20px',
-              transform: `scaleY(${finalScale})`,
-              filter: isActive && !isMuted 
-                ? `brightness(${0.8 + (audioLevel * 0.4)})` 
-                : 'brightness(0.6)'
-            }}
-          />
-        )
-      })}
-    </div>
-  )
-}
-
-// Sound effects manager
-class SoundManager {
-  private audioContext: AudioContext | null = null
-  private sounds: Map<string, AudioBuffer> = new Map()
-  
-  async init() {
-    try {
-      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
-    } catch (error) {
-      console.warn('Audio context not supported:', error)
-    }
-  }
-  
-  play(soundName: string) {
-    if (!this.audioContext || !this.sounds.has(soundName)) return
-    
-    const buffer = this.sounds.get(soundName)!
-    const source = this.audioContext.createBufferSource()
-    source.buffer = buffer
-    source.connect(this.audioContext.destination)
-    source.start()
-  }
-  
-  dispose() {
-    if (this.audioContext) {
-      this.audioContext.close()
-      this.audioContext = null
-    }
-  }
-}
-
-export default function VAPIWidget({ 
-  userId, 
-  onTranscriptUpdate, 
-  onCallEnd, 
+export default function VAPIWidget({
+  onTranscriptUpdate,
+  onCallEnd,
   remainingSeconds = 0,
-  onTimeLimitReached 
+  onTimeLimitReached
 }: VAPIWidgetProps) {
   const [vapi, setVapi] = useState<any>(null)
   const [isCallActive, setIsCallActive] = useState(false)
@@ -124,16 +41,8 @@ export default function VAPIWidget({
   const currentCallIdRef = useRef<string | null>(null)
   const callStartTimeRef = useRef<Date | null>(null)
   const timeLimitReachedRef = useRef<boolean>(false)
-  const audioContextRef = useRef<AudioContext | null>(null)
   const audioStreamRef = useRef<MediaStream | null>(null)
   const currentCallRef = useRef<any>(null) // Store reference to VAPI call object
-
-  // Audio visualization states
-  const [audioLevel, setAudioLevel] = useState(0)
-  const [inputAudioLevel, setInputAudioLevel] = useState(0)
-  const soundManagerRef = useRef<SoundManager | null>(null)
-  const audioAnalyserRef = useRef<AnalyserNode | null>(null)
-  const animationFrameRef = useRef<number | null>(null)
 
   // Anam video assistant states
   const [showAnamChat, setShowAnamChat] = useState(false)
@@ -144,70 +53,6 @@ export default function VAPIWidget({
   const showErrorToast = (message: string) => {
     setError(message)
     setTimeout(() => setError(null), config.ui.timeouts.errorToastDuration)
-  }
-
-  // Initialize audio analysis for visualization
-  const initAudioAnalysis = async () => {
-    try {
-      if (!audioStreamRef.current) return
-      
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
-      const source = audioContext.createMediaStreamSource(audioStreamRef.current)
-      const analyser = audioContext.createAnalyser()
-      
-      analyser.fftSize = 256
-      analyser.smoothingTimeConstant = 0.8
-      
-      source.connect(analyser)
-      audioAnalyserRef.current = analyser
-      audioContextRef.current = audioContext
-      
-      // Start audio level monitoring
-      updateAudioLevels()
-    } catch (error) {
-      console.warn('Audio analysis not supported:', error)
-    }
-  }
-
-  // Update audio levels for visualization
-  const updateAudioLevels = () => {
-    if (!audioAnalyserRef.current) return
-    
-    const analyser = audioAnalyserRef.current
-    const dataArray = new Uint8Array(analyser.frequencyBinCount)
-    
-    const updateLevels = () => {
-      analyser.getByteFrequencyData(dataArray)
-      
-      // Calculate average frequency data for visualization
-      const average = dataArray.reduce((a, b) => a + b) / dataArray.length
-      const normalizedLevel = average / 255
-      
-      setAudioLevel(normalizedLevel)
-      setInputAudioLevel(normalizedLevel)
-      
-      // Continue animation
-      animationFrameRef.current = requestAnimationFrame(updateLevels)
-    }
-    
-    updateLevels()
-  }
-
-  // Stop audio analysis
-  const stopAudioAnalysis = () => {
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current)
-      animationFrameRef.current = null
-    }
-    
-    if (audioContextRef.current) {
-      audioContextRef.current.close()
-      audioContextRef.current = null
-    }
-    
-    audioAnalyserRef.current = null
-    setAudioLevel(0)
-    setInputAudioLevel(0)
   }
 
   // Check if user has enough time to start a call
@@ -235,26 +80,26 @@ export default function VAPIWidget({
   // Check if VAPI supports mute/unmute methods
   const vapiSupportsAudioControl = () => {
     if (!vapi) return false
-    
+
     // Check for both mute and unmute methods on instance and prototype
-    const hasMute = typeof vapi.setMuted === 'function' || 
-                   typeof vapi.mute === 'function' ||
-                   typeof Object.getPrototypeOf(vapi)?.setMuted === 'function'
-    const hasUnmute = typeof vapi.setMuted === 'function' || 
-                      typeof vapi.unmute === 'function' ||
-                      typeof Object.getPrototypeOf(vapi)?.setMuted === 'function'
-    
+    const hasMute = typeof vapi.setMuted === 'function' ||
+      typeof vapi.mute === 'function' ||
+      typeof Object.getPrototypeOf(vapi)?.setMuted === 'function'
+    const hasUnmute = typeof vapi.setMuted === 'function' ||
+      typeof vapi.unmute === 'function' ||
+      typeof Object.getPrototypeOf(vapi)?.setMuted === 'function'
+
     return hasMute && hasUnmute
   }
 
   // Mute/unmute functionality
   const toggleMute = async () => {
     if (isMuteProcessing) return // Prevent multiple simultaneous mute operations
-    
+
     setIsMuteProcessing(true)
     try {
       const currentMode = activeModeRef.current
-      
+
       if (currentMode === 'sell') {
         // For Anam video calls, use local audio stream control
         await handleAnamMute(!isMuted)
@@ -262,7 +107,7 @@ export default function VAPIWidget({
         // For VAPI calls, try VAPI methods first, then fallback
         await handleVAPIMute(!isMuted)
       }
-      
+
     } catch (error) {
       console.error('Error toggling mute:', error)
       showErrorToast('Failed to toggle mute. Please try again.')
@@ -276,19 +121,19 @@ export default function VAPIWidget({
     try {
       if (!audioStreamRef.current) {
         await getUserMedia()
-        
+
         if (!audioStreamRef.current) {
           throw new Error('Cannot access microphone for Anam mode')
         }
       }
-  
+
       // Enable/disable all audio tracks
       audioStreamRef.current.getTracks().forEach(track => {
         if (track.kind === 'audio') {
           track.enabled = !mute
         }
       })
-      
+
       setIsMuted(mute)
     } catch (error) {
       console.error('Anam mute control failed:', error)
@@ -311,16 +156,16 @@ export default function VAPIWidget({
         setIsMuted(mute)
         return
       }
-      
+
       // Second try: use the stored call object reference
       const currentCall = currentCallRef.current
-      
+
       if (currentCall && typeof currentCall.setMuted === 'function') {
         await currentCall.setMuted(mute)
         setIsMuted(mute)
         return
       }
-      
+
       // Third try: try VAPI instance methods if call object doesn't have setMuted
       if (vapiSupportsAudioControl()) {
         try {
@@ -351,19 +196,19 @@ export default function VAPIWidget({
     try {
       if (!audioStreamRef.current) {
         await getUserMedia()
-        
+
         if (!audioStreamRef.current) {
           throw new Error('Cannot access microphone for fallback control')
         }
       }
-  
+
       // Enable/disable all audio tracks
       audioStreamRef.current.getTracks().forEach(track => {
         if (track.kind === 'audio') {
           track.enabled = !mute
         }
       })
-      
+
       setIsMuted(mute)
     } catch (error) {
       console.error('Fallback mute control failed:', error)
@@ -378,36 +223,36 @@ export default function VAPIWidget({
       if (audioStreamRef.current && audioStreamRef.current.active) {
         return audioStreamRef.current
       }
-  
+
       // Stop existing stream if it's not active
       if (audioStreamRef.current) {
         audioStreamRef.current.getTracks().forEach(track => track.stop())
         audioStreamRef.current = null
       }
-  
-      const stream = await navigator.mediaDevices.getUserMedia({ 
+
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
           sampleRate: 16000, // Optimize for speech
           channelCount: 1 // Mono for better speech recognition
-        } 
+        }
       })
-      
+
       audioStreamRef.current = stream
-      
+
       // Set initial mute state based on current state
       if (isMuted) {
         stream.getAudioTracks().forEach(track => {
           track.enabled = false
         })
       }
-      
+
       return stream
     } catch (error: any) {
       console.error('Error getting user media:', error)
-      
+
       // Provide specific error messages based on error type
       if (error.name === 'NotAllowedError') {
         showErrorToast('Microphone access denied. Please allow microphone permissions and try again.')
@@ -418,7 +263,7 @@ export default function VAPIWidget({
       } else {
         showErrorToast('Failed to access microphone. Please check permissions and try again.')
       }
-      
+
       return null
     }
   }
@@ -446,7 +291,6 @@ export default function VAPIWidget({
     if (mode === 'sell') {
       // Get user media for Anam video calls and mute functionality
       await getUserMedia()
-      await initAudioAnalysis() // Initialize audio analysis
       startAnamChat()
       return
     }
@@ -463,8 +307,7 @@ export default function VAPIWidget({
       // For VAPI calls, we need to get user media for mute functionality
       // even though VAPI handles the call audio internally
       await getUserMedia()
-      await initAudioAnalysis() // Initialize audio analysis
-      
+
       // Start the call and get the call ID
       const call = await vapi.start(assistantId)
 
@@ -495,9 +338,6 @@ export default function VAPIWidget({
   }
 
   const endCall = () => {
-    // Stop audio analysis
-    stopAudioAnalysis()
-    
     // Clean up audio stream
     if (audioStreamRef.current) {
       audioStreamRef.current.getTracks().forEach(track => {
@@ -505,13 +345,13 @@ export default function VAPIWidget({
       })
       audioStreamRef.current = null
     }
-    
+
     // Reset mute state
     setIsMuted(false)
-    
+
     // Clear call reference
     currentCallRef.current = null
-    
+
     if (activeModeRef.current === 'sell') {
       endAnamChat()
     } else if (vapi) {
@@ -521,7 +361,7 @@ export default function VAPIWidget({
         console.warn('Error stopping VAPI call:', error)
       }
     }
-    
+
     // Reset active mode
     activeModeRef.current = null
   }
@@ -699,7 +539,7 @@ export default function VAPIWidget({
       // Call the onCallEnd callback with accurate duration and transcript
       const transcriptStr = transcriptRef.current.map((t: any) => t.text).join(' ')
       const mergedTranscriptData = getMergedTranscript()
-      
+
       onCallEnd?.(finalDuration, transcriptStr, mergedTranscriptData)
 
       // Reset call tracking
@@ -771,15 +611,6 @@ export default function VAPIWidget({
       if (vapiInstance && typeof vapiInstance.stop === 'function') {
         vapiInstance.stop()
       }
-      
-      // Cleanup audio analysis
-      stopAudioAnalysis()
-      
-      // Cleanup sound manager
-      if (soundManagerRef.current) {
-        soundManagerRef.current.dispose()
-        soundManagerRef.current = null
-      }
     }
   }, [onCallEnd, onTranscriptUpdate])
 
@@ -799,14 +630,14 @@ export default function VAPIWidget({
   // Function to merge consecutive messages from the same role
   const getMergedTranscript = () => {
     if (transcriptRef.current.length === 0) return []
-    
+
     const merged: any[] = []
     let currentRole = transcriptRef.current[0].role
     let currentText = transcriptRef.current[0].text
-    
+
     for (let i = 1; i < transcriptRef.current.length; i++) {
       const message = transcriptRef.current[i]
-      
+
       if (message.role === currentRole) {
         // Same role, merge the text
         currentText += ' ' + message.text
@@ -817,10 +648,10 @@ export default function VAPIWidget({
         currentText = message.text
       }
     }
-    
+
     // Add the last message
     merged.push({ role: currentRole, text: currentText })
-    
+
     return merged
   }
 
@@ -878,49 +709,17 @@ export default function VAPIWidget({
             )}
           </div>
 
-          {/* Audio Visualization */}
-          {isCallActive && (
-            <div className="bg-gradient-to-r from-blue-50 to-purple-50 mb-4 p-4 border border-blue-200 rounded-lg">
-              <div className="flex justify-center items-center">
-                {/* Input Audio Level */}
-                <div className="text-center">
-                  <div className="flex justify-center items-center mb-2">
-                    {isMuted ? (
-                      <VolumeX className="w-5 h-5 text-red-500" />
-                    ) : (
-                      <Volume2 className="w-5 h-5 text-green-500" />
-                    )}
-                    <span className="ml-2 font-medium text-gray-700 text-sm">Audio Input Level</span>
-                  </div>
-                  <AudioVisualizer 
-                    isActive={isCallActive} 
-                    isSpeaking={isSpeaking} 
-                    isMuted={isMuted}
-                    audioLevel={inputAudioLevel}
-                  />
-                  <div className="mt-2 text-gray-500 text-xs">
-                    {isMuted ? 'Muted' : `${Math.round(inputAudioLevel * 100)}%`}
-                  </div>
-                  <div className="mt-1 text-gray-600 text-xs">
-                    {isMuted ? 'Microphone is muted' : 'Speak to see audio levels'}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
           {!isCallActive ? (
             <button
               onClick={() => startCall(selectedMode)}
               disabled={!canStartCall()}
-              className={`inline-flex items-center px-6 py-3 rounded-lg font-medium transition-colors ${
-                canStartCall()
-                  ? 'bg-green-600 hover:bg-green-700 text-white'
-                  : 'bg-gray-400 text-gray-200 cursor-not-allowed'
-              }`}
+              className={`inline-flex items-center px-6 py-3 rounded-lg font-medium transition-colors ${canStartCall()
+                ? 'bg-green-600 hover:bg-green-700 text-white'
+                : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                }`}
             >
               <Play className="mr-2 w-5 h-5" />
-              {canStartCall() 
+              {canStartCall()
                 ? `Start ${config.ui.trainingModes.find(m => m.id === selectedMode)?.title} Session`
                 : 'No Time Available'
               }
@@ -930,16 +729,15 @@ export default function VAPIWidget({
               <div className="font-semibold text-gray-900 text-lg">
                 {formatDuration(displayDuration)}
               </div>
-              
+
               {/* Mute Button */}
               <button
                 onClick={toggleMute}
                 disabled={isMuteProcessing}
-                className={`inline-flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${
-                  isMuted 
-                    ? 'bg-red-500 hover:bg-red-600 text-white' 
-                    : 'bg-gray-500 hover:bg-gray-600 text-white'
-                } ${isMuteProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`inline-flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${isMuted
+                  ? 'bg-red-500 hover:bg-red-600 text-white'
+                  : 'bg-gray-500 hover:bg-gray-600 text-white'
+                  } ${isMuteProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
                 title={`${isMuted ? 'Unmute' : 'Mute'} microphone (${activeModeRef.current || 'unknown'} mode)`}
               >
                 {isMuteProcessing ? (
@@ -959,7 +757,7 @@ export default function VAPIWidget({
                   </>
                 )}
               </button>
-              
+
               <button
                 onClick={endCall}
                 className="inline-flex items-center bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg font-medium text-white transition-colors"
@@ -969,7 +767,7 @@ export default function VAPIWidget({
               </button>
             </div>
           )}
-          
+
           {/* Debug Info for Mute Troubleshooting */}
           {process.env.NODE_ENV === 'development' && (
             <div className="bg-gray-100 mt-4 p-3 rounded-lg text-gray-600 text-xs">
@@ -1138,16 +936,7 @@ export default function VAPIWidget({
 
         {/* Instructions */}
         {!isCallActive && (
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <h4 className="mb-2 font-medium text-blue-900">Instructions</h4>
-            <ul className="space-y-1 text-blue-800 text-sm">
-              <li>• Select your preferred training mode</li>
-              <li>• Click "Start Session" to begin your practice call</li>
-              <li>• Speak naturally and follow your sales training</li>
-              <li>• The AI customer will respond based on your approach</li>
-              <li>• Your performance will be analyzed and graded</li>
-            </ul>
-          </div>
+          <Instructions />
         )}
       </div>
 
@@ -1188,49 +977,17 @@ export default function VAPIWidget({
 
       {/* Connecting Spinner Overlay */}
       {isConnecting && (
-        <div className="z-50 fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 backdrop-blur-sm !mt-0">
-          <div className="bg-gray-800 p-8 border border-gray-700 rounded-2xl text-center">
-            <div className="mx-auto mb-4 border-cyan-400 border-b-2 rounded-full w-12 h-12 animate-spin"></div>
-            <p className="font-semibold text-white text-lg">
-              {selectedMode === 'sell' ? 'Connecting to video assistant...' : 'Connecting to assistant...'}
-            </p>
-          </div>
-        </div>
+        <ConnectingOverlay selectedMode={selectedMode} />
       )}
 
       {/* Processing Spinner Overlay */}
       {isProcessing && (
-        <div className="z-50 fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 backdrop-blur-sm !mt-0">
-          <div className="bg-gray-800 p-8 border border-gray-700 rounded-2xl max-w-md text-center">
-            <div className="mx-auto mb-4 border-purple-400 border-b-2 rounded-full w-12 h-12 animate-spin"></div>
-            <h3 className="mb-2 font-bold text-white text-xl">Analyzing Performance</h3>
-            <p className="mb-4 text-gray-300 text-sm">AI is evaluating your conversation and generating insights...</p>
-            <div className="space-y-2 text-left">
-              <div className="flex items-center text-gray-400 text-sm">
-                <div className="bg-purple-400 mr-2 rounded-full w-2 h-2"></div>
-                Processing transcript
-              </div>
-              <div className="flex items-center text-gray-400 text-sm">
-                <div className="bg-purple-400 mr-2 rounded-full w-2 h-2"></div>
-                Evaluating sales techniques
-              </div>
-              <div className="flex items-center text-gray-400 text-sm">
-                <div className="bg-purple-400 mr-2 rounded-full w-2 h-2"></div>
-                Generating performance grade
-              </div>
-            </div>
-          </div>
-        </div>
+        <ProcessingOverlay selectedMode={selectedMode} />
       )}
 
       {/* Error Toast */}
       {error && (
-        <div className="top-4 right-4 z-[1000] fixed bg-red-500 shadow-lg px-6 py-3 rounded-lg text-white animate-slide-in-right">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4" />
-            <span>{error}</span>
-          </div>
-        </div>
+        <ErrorToast error={error} />
       )}
     </>
   )
