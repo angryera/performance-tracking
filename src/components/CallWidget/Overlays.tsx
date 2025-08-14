@@ -40,3 +40,24 @@ export const ProcessingOverlay = ({ selectedMode }: { selectedMode: string }) =>
         </div>
     )
 }
+
+
+export const SuccessOverlay = () => {
+    return (
+        <div className="z-50 fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 backdrop-blur-sm !mt-0 p-4">
+            <div className="bg-white shadow-2xl p-6 sm:p-8 border border-gray-200 rounded-2xl w-full max-w-sm sm:max-w-md text-center">
+                <div className="flex justify-center items-center bg-green-100 mx-auto mb-4 sm:mb-6 rounded-full w-12 sm:w-16 h-12 sm:h-16">
+                    <svg className="w-6 sm:w-8 h-6 sm:h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                </div>
+                <h3 className="mb-2 sm:mb-3 font-bold text-green-800 text-xl sm:text-2xl">
+                    Chat Session Complete!
+                </h3>
+                <p className="text-green-700 text-base sm:text-lg">
+                    Your VAPI chat conversation has been analyzed and saved successfully.
+                </p>
+            </div>
+        </div>
+    )
+}

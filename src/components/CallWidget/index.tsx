@@ -7,7 +7,7 @@ import { AlertCircle, Clock, Mic, MicOff, Phone, Play, Square, MessageSquare } f
 import { useEffect, useRef, useState } from 'react'
 
 import AnamVideoWidget from './AnamVideoWidget'
-import { ConnectingOverlay, ProcessingOverlay } from './Overlays'
+import { ConnectingOverlay, ProcessingOverlay, SuccessOverlay } from './Overlays'
 import ErrorToast from './Toast'
 import VAPISessionTypeSelector from './VAPISessionTypeSelector'
 import VAPIChatWidget from './VAPIChatWidget'
@@ -16,20 +16,22 @@ import createSessionToken from './helpers/AnamSessionToken'
 import scrollToBottomHelper from './helpers/ScrollToBottom'
 import { getAllMessages, getMergedTranscript } from './helpers/Transcript'
 import useVAPIEventListener from './hooks/useVAPIEventListener'
-import VAPIWidget from './VAPIWidget'
+import VAPICallWidget from './VAPICallWidget'
 
 interface CallWidgetProps {
   onTranscriptUpdate?: (transcript: string) => void
   onCallEnd?: (duration: number, transcript: string, mergedTranscript: Array<{ role: string, text: string }>) => void
   remainingSeconds?: number
   onTimeLimitReached?: () => void
+  currentUser?: { id: string; email: string; firstName: string; lastName: string; role: string; minutes: number } | null
 }
 
 export default function CallWidget({
   onTranscriptUpdate,
   onCallEnd,
   remainingSeconds = 0,
-  onTimeLimitReached
+  onTimeLimitReached,
+  currentUser
 }: CallWidgetProps) {
   const [vapi, setVapi] = useState<any>(null)
   const [isCallActive, setIsCallActive] = useState(false)
@@ -74,7 +76,6 @@ export default function CallWidget({
   const messageListRef = useRef<HTMLDivElement>(null)
 
   // Mock functions for VAPI Chat integration (these would be passed from parent component)
-  const currentUser = { id: 'mock-user-id' } // This should come from parent
   const fetchConversations = () => {
     console.log('Mock fetchConversations called')
     // This should be implemented by parent component
@@ -445,6 +446,16 @@ export default function CallWidget({
   const startAnamChat = async () => {
     const maxRetries = 5
 
+    // Set call start time for sell mode
+    const startTime = new Date()
+    setCallStartTime(startTime)
+    callStartTimeRef.current = startTime
+
+    // Ensure VAPI states are reset when starting Anam
+    setIsVapiChatActive(false)
+    setPendingVapiMode('')
+    setShowVapiSessionTypeSelector(false)
+
     for (let i = 0; i < maxRetries; i++) {
       try {
         setAnamStatus("Creating session...")
@@ -477,7 +488,20 @@ export default function CallWidget({
           setConversationHistory(newMessages)
         })
 
-        if (videoRef.current) {
+        // Wait for the video element to be available in the DOM
+        let videoElement = null
+        let attempts = 0
+        const maxVideoAttempts = 10
+
+        while (!videoElement && attempts < maxVideoAttempts) {
+          videoElement = document.getElementById(config.video.elementId)
+          if (!videoElement) {
+            await new Promise(resolve => setTimeout(resolve, 100))
+            attempts++
+          }
+        }
+
+        if (videoElement) {
           await client.streamToVideoElement(config.video.elementId)
           setAnamClient(client)
 
@@ -507,6 +531,8 @@ export default function CallWidget({
           }
 
           return // Success, exit the retry loop
+        } else {
+          throw new Error('Video element not found in DOM')
         }
       } catch (error) {
         console.error(`Connection attempt ${i + 1} failed:`, error)
@@ -533,15 +559,91 @@ export default function CallWidget({
       setAnamClient(null)
     }
 
+    // Get the final transcript for sell mode
+    const finalTranscript = getAllMessages(userMessages, conversationHistoryRef)
+    const finalMergedTranscript = finalTranscript.map(msg => ({
+      role: msg.role,
+      text: msg.text
+    }))
+
+    // Calculate call duration
+    let duration = 0
+    if (callStartTimeRef.current) {
+      const endTime = new Date()
+      duration = Math.floor((endTime.getTime() - callStartTimeRef.current.getTime()) / 1000)
+    }
+
+    // Log debug information
+    console.log('🔍 Anam call ending - Debug info:', {
+      currentUser: currentUser,
+      userId: currentUser?.id,
+      finalTranscript,
+      finalMergedTranscript,
+      duration
+    })
+
+    // Only proceed if we have a valid user
+    if (!currentUser?.id) {
+      console.warn('⚠️ No valid user ID found, skipping conversation save')
+      // Still reset the UI states
+      setShowAnamChat(false)
+      setAnamStatus('')
+      setConversationHistory([])
+      setUserMessages([])
+      setUserInput('')
+      setIsAssistantSpeaking(false)
+      conversationHistoryRef.current = []
+      setIsCallActive(false)
+      activeModeRef.current = null
+      setCallStartTime(null)
+      callStartTimeRef.current = null
+      setCurrentCallId(null)
+      currentCallIdRef.current = null
+      setDisplayDuration(0)
+      setIsVapiChatActive(false)
+      setPendingVapiMode('')
+      setShowVapiSessionTypeSelector(false)
+      setSelectedVapiSessionType('talk')
+      return
+    }
+
+    // Call the onCallEnd callback if provided
+    if (onCallEnd) {
+      const transcriptText = finalTranscript.map(msg => `${msg.role}: ${msg.text}`).join('\n')
+      onCallEnd(duration, transcriptText, finalMergedTranscript)
+    }
+
+    // Update transcript for parent component
+    if (onTranscriptUpdate) {
+      const transcriptText = finalTranscript.map(msg => `${msg.role}: ${msg.text}`).join('\n')
+      onTranscriptUpdate(transcriptText)
+    }
+
+    // Reset all Anam-specific states
     setShowAnamChat(false)
-    setIsCallActive(false)
     setAnamStatus('')
     setConversationHistory([])
     setUserMessages([])
     setUserInput('')
     setIsAssistantSpeaking(false)
     conversationHistoryRef.current = []
+
+    // Reset all call states to prevent conflicts
+    setIsCallActive(false)
     activeModeRef.current = null
+
+    // Reset call timing
+    setCallStartTime(null)
+    callStartTimeRef.current = null
+    setCurrentCallId(null)
+    currentCallIdRef.current = null
+    setDisplayDuration(0)
+
+    // Reset VAPI states to ensure clean state
+    setIsVapiChatActive(false)
+    setPendingVapiMode('')
+    setShowVapiSessionTypeSelector(false)
+    setSelectedVapiSessionType('talk')
   }
 
   const sendTextMessage = async () => {
@@ -556,7 +658,7 @@ export default function CallWidget({
       const userMessage = {
         id: userMessageId,
         role: 'user',
-        content: messageText,
+        text: messageText,
         timestamp: new Date().toISOString(),
         source: 'user'
       }
@@ -573,7 +675,7 @@ export default function CallWidget({
       showErrorToast('Failed to send message. Please try again.')
 
       // Remove the message from user messages if sending failed
-      setUserMessages(prev => prev.filter(msg => msg.content !== messageText))
+      setUserMessages(prev => prev.filter(msg => msg.text !== messageText))
     } finally {
       setIsSendingMessage(false)
     }
@@ -767,22 +869,9 @@ export default function CallWidget({
             </>
           )}
         </div>
-
-        {/* VAPI Voice Call Widget - Only show when NOT in chat mode */}
-        {!isVapiChatActive && isCallActive && (
-          <VAPIWidget
-            isCallActive={isCallActive}
-            transcript={transcript}
-            isMuted={isMuted}
-            isMuteProcessing={isMuteProcessing}
-            getMergedTranscript={() => mergedTranscript}
-            setTranscript={setTranscript}
-            isSpeaking={isSpeaking}
-          />
-        )}
       </div>
 
-      {/* Anam Video Assistant Modal */}
+      {/* Anam Video Assistant Modal - Highest Priority */}
       {showAnamChat && (
         <AnamVideoWidget
           config={config}
@@ -803,95 +892,22 @@ export default function CallWidget({
         />
       )}
 
-      {/* VAPI Voice Call Modal */}
-      {!isVapiChatActive && isCallActive && (
-        <div className="z-50 fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 backdrop-blur-sm !mt-0 p-4">
-          <div className="bg-gray-800 shadow-2xl p-4 sm:p-6 lg:p-8 border border-gray-700 rounded-2xl lg:rounded-3xl w-full max-w-6xl h-[700px] sm:h-[800px] sm:max-h-[80vh]">
-            <div className="flex flex-row justify-between items-start sm:items-center gap-4 mb-4 sm:mb-6 lg:mb-8">
-              <div className="flex items-center space-x-2 sm:space-x-4">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="bg-blue-500 rounded-full w-3 sm:w-4 h-3 sm:h-4 animate-pulse"></div>
-                  <h3 className="font-bold text-white text-lg sm:text-xl lg:text-3xl">
-                    {activeModeRef.current ? `${activeModeRef.current.charAt(0).toUpperCase() + activeModeRef.current.slice(1)} Voice Call` : 'VAPI Voice Call'}
-                  </h3>
-                </div>
-                <div className="flex items-center space-x-2 bg-gray-700 px-2 py-1 rounded-full">
-                  <div className="bg-green-500 rounded-full w-2 h-2 animate-pulse"></div>
-                  <span className="sm:hidden font-medium text-green-400 text-xs sm:text-sm">Live</span>
-                  <span className="hidden sm:block font-medium text-green-400 text-xs sm:text-sm">Live Session</span>
-                </div>
-              </div>
-              <button
-                onClick={endCall}
-                className="bg-red-500 hover:bg-red-600 shadow-lg px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-medium text-white text-sm sm:text-base hover:scale-105 active:scale-95 transition-all duration-200"
-              >
-                <div className="flex items-center space-x-1 sm:space-x-2">
-                  <svg className="w-4 sm:w-5 h-4 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                  <span className="hidden sm:inline">End Call</span>
-                  <span className="sm:hidden">End</span>
-                </div>
-              </button>
-            </div>
-
-            {/* Voice Call Interface */}
-            <div className="flex flex-col h-[500px] sm:h-[550px] lg:h-[600px]">
-              <div className="mb-3 sm:mb-4 lg:mb-6 text-center">
-                <h4 className="mb-1 sm:mb-2 font-semibold text-white text-base sm:text-lg lg:text-xl">Voice Call</h4>
-                <p className="hidden sm:block text-gray-300 text-xs sm:text-sm">Speak naturally with the AI assistant</p>
-              </div>
-
-              {/* Call Controls */}
-              <div className="flex justify-center items-center space-x-4 mb-4">
-                <div className="font-semibold text-white text-lg">
-                  {formatDuration(displayDuration)}
-                </div>
-
-                {/* Mute Button */}
-                <button
-                  onClick={toggleMute}
-                  disabled={isMuteProcessing}
-                  className={`inline-flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${isMuted
-                    ? 'bg-red-500 hover:bg-red-600 text-white'
-                    : 'bg-gray-500 hover:bg-gray-600 text-white'
-                    } ${isMuteProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  title={`${isMuted ? 'Unmute' : 'Mute'} microphone`}
-                >
-                  {isMuteProcessing ? (
-                    <>
-                      <div className="mr-2 border-2 border-white border-t-transparent rounded-full w-4 h-4 animate-spin"></div>
-                      {isMuted ? 'Unmuting...' : 'Muting...'}
-                    </>
-                  ) : isMuted ? (
-                    <>
-                      <MicOff className="mr-2 w-4 h-4" />
-                      Muted
-                    </>
-                  ) : (
-                    <>
-                      <Mic className="mr-2 w-4 h-4" />
-                      Mute
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* Transcript Display */}
-              <div className="flex-1 bg-gray-900 p-4 rounded-xl lg:rounded-2xl overflow-y-auto">
-                <VAPIWidget
-                  isCallActive={isCallActive}
-                  transcript={transcript}
-                  isMuted={isMuted}
-                  isMuteProcessing={isMuteProcessing}
-                  getMergedTranscript={() => mergedTranscript}
-                  setTranscript={setTranscript}
-                  isSpeaking={isSpeaking}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* VAPI Voice Call Modal - Only show when Anam is NOT active */}
+      {!showAnamChat && !isVapiChatActive && isCallActive && activeModeRef.current !== 'sell' && (
+        <VAPICallWidget
+          isCallActive={isCallActive}
+          transcript={transcript}
+          isMuted={isMuted}
+          isMuteProcessing={isMuteProcessing}
+          getMergedTranscript={() => mergedTranscript}
+          setTranscript={setTranscript}
+          isSpeaking={isSpeaking}
+          activeModeRef={activeModeRef}
+          endCall={endCall}
+          formatDuration={formatDuration}
+          displayDuration={displayDuration}
+          toggleMute={toggleMute}
+        />
       )}
 
       {/* VAPI Chat Modal */}
@@ -899,78 +915,9 @@ export default function CallWidget({
         <VAPIChatWidget
           assistantId={config.vapi.assistants[activeModeRef.current as keyof typeof config.vapi.assistants] || ''}
           mode={activeModeRef.current || ''}
-          onTranscriptUpdate={(transcript) => {
-            console.log('VAPI Chat transcript updated:', transcript)
-          }}
           onCallEnd={async (duration, transcript, mergedTranscript) => {
             setIsVapiChatActive(false)
-            console.log('VAPI Chat ended:', { duration, transcript, mergedTranscript })
-
-            // Analyze transcript with AI first
-            let grade = null
-            let summary = null
-
-            setIsAnalyzing(true)
-            try {
-              const analysisResponse = await fetch('/api/analyze-transcript', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ transcript }),
-              })
-
-              if (analysisResponse.ok) {
-                const analysis = await analysisResponse.json()
-                grade = analysis.grade
-                summary = analysis.summary
-                console.log('AI analysis completed:', analysis)
-              } else {
-                console.error('Failed to analyze transcript')
-              }
-            } catch (error) {
-              console.error('Error analyzing transcript:', error)
-            } finally {
-              setIsAnalyzing(false)
-            }
-
-            // Save conversation to database with AI analysis
-            setIsSaving(true)
-            try {
-              const response = await fetch('/api/conversations', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  userId: currentUser?.id,
-                  transcript,
-                  mergedTranscript,
-                  duration,
-                  grade,
-                  summary
-                }),
-              })
-
-              if (response.ok) {
-                console.log('VAPI Chat conversation saved successfully with AI analysis')
-                // Refresh conversations for all users (both admin and regular reps)
-                fetchConversations()
-              } else {
-                console.error('Failed to save VAPI Chat conversation')
-              }
-            } catch (error) {
-              console.error('Error saving VAPI Chat conversation:', error)
-            } finally {
-              setIsSaving(false)
-              setShowSuccess(true)
-              setTimeout(() => setShowSuccess(false), 3000) // Hide after 3 seconds
-
-              // Refresh user usage data
-              if (currentUser?.id) {
-                fetchConversations()
-              }
-            }
+            onCallEnd?.(duration, transcript, mergedTranscript)
           }}
         />
       )}
@@ -1004,21 +951,7 @@ export default function CallWidget({
 
       {/* Success Message Overlay */}
       {showSuccess && (
-        <div className="z-50 fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 backdrop-blur-sm !mt-0 p-4">
-          <div className="bg-white shadow-2xl p-6 sm:p-8 border border-gray-200 rounded-2xl w-full max-w-sm sm:max-w-md text-center">
-            <div className="flex justify-center items-center bg-green-100 mx-auto mb-4 sm:mb-6 rounded-full w-12 sm:w-16 h-12 sm:h-16">
-              <svg className="w-6 sm:w-8 h-6 sm:h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h3 className="mb-2 sm:mb-3 font-bold text-green-800 text-xl sm:text-2xl">
-              Chat Session Complete!
-            </h3>
-            <p className="text-green-700 text-base sm:text-lg">
-              Your VAPI chat conversation has been analyzed and saved successfully.
-            </p>
-          </div>
-        </div>
+        <SuccessOverlay />
       )}
     </>
   )

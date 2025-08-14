@@ -14,14 +14,12 @@ interface Message {
 interface VAPIChatWidgetProps {
   assistantId: string
   mode: string
-  onTranscriptUpdate?: (transcript: string) => void
   onCallEnd?: (duration: number, transcript: string, mergedTranscript: Array<{ role: string, text: string }>) => void
 }
 
 export default function VAPIChatWidget({
   assistantId,
   mode,
-  onTranscriptUpdate,
   onCallEnd
 }: VAPIChatWidgetProps) {
   const [messages, setMessages] = useState<Message[]>([])
@@ -64,7 +62,6 @@ export default function VAPIChatWidget({
         const transcriptText = updatedMessages
           .map(msg => `${msg.role}: ${msg.content}`)
           .join('\n')
-        onTranscriptUpdate?.(transcriptText)
 
         return updatedMessages
       })

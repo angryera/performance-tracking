@@ -11,6 +11,27 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { userId, transcript, mergedTranscript, duration, grade, summary } = body
 
+    // Validate required fields
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'userId is required' },
+        { status: 400 }
+      )
+    }
+
+    // Validate that the user exists before creating conversation
+    const userExists = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true }
+    })
+
+    if (!userExists) {
+      return NextResponse.json(
+        { error: `User with ID '${userId}' not found. Please ensure you are logged in with a valid account.` },
+        { status: 400 }
+      )
+    }
+
     const conversation = await prisma.conversation.create({
       data: {
         userId,
