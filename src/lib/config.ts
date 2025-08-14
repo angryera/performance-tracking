@@ -13,7 +13,7 @@ export const config = {
 
     // Anam AI Configuration
     anam: {
-        apiKey: "ZjVlZjhmOGQtNWMxYi00ODMxLTg3ZDQtZDYxNWExN2NkZjBiOnE2S0hVeGVWeEdDVGpESFhVNHkwS0Zia1MwRENkc0MxYURNdWFNU3RrT3M9",
+        apiKey: "ZjVlZjhmOGQtNWMxYi00ODMxLTg3ZDQtZDYxNWExN2NkZjBiOnE2S0hVeGVWeEdDVGpESFhVNHkwS0Zia1MwRENkc0MxYURNdWFNU3RrT3M9",        
         apiUrl: "https://api.anam.ai/v1/auth/session-token",
         persona: {
             name: "Agent",
