@@ -14,7 +14,7 @@ interface Message {
 interface VAPIChatWidgetProps {
   assistantId: string
   mode: string
-  onCallEnd?: (duration: number, transcript: string, mergedTranscript: Array<{ role: string, text: string }>) => void
+  onCallEnd?: (duration: number, transcript: string, mergedTranscript: Array<{ role: string, content: string }>) => void
 }
 
 export default function VAPIChatWidget({
@@ -99,7 +99,7 @@ export default function VAPIChatWidget({
     // Create merged transcript for parent component
     const mergedTranscript = messages.map(msg => ({
       role: msg.role,
-      text: msg.content
+      content: msg.content
     }))
 
     const transcriptText = messages.map(msg => `${msg.role}: ${msg.content}`).join('\n')

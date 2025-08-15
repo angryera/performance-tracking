@@ -137,7 +137,7 @@ const AnamVideoWidget = ({
                                             <span className="ml-2">{formatTimestamp(message.timestamp)}</span>
                                         )}
                                     </div>
-                                    <div className="text-sm">{message.text}</div>
+                                    <div className="text-sm">{message.content}</div>
                                 </div>
                             </div>
                         ))}

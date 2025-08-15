@@ -33,7 +33,7 @@ interface Conversation {
     email: string
   }
   transcript: string
-  mergedTranscript?: Array<{ role: string, text: string }>
+  mergedTranscript?: Array<{ role: string, content: string }>
   duration: number
   grade: string
   summary: string
@@ -619,8 +619,8 @@ export default function ConversationsPage() {
           <div className="bg-white shadow-2xl rounded-2xl w-full max-w-md overflow-hidden">
             {/* Header */}
             <div className={`px-6 py-4 ${confirmAction.type === 'hide'
-                ? 'bg-gradient-to-r from-red-500 to-pink-500'
-                : 'bg-gradient-to-r from-green-500 to-emerald-500'
+              ? 'bg-gradient-to-r from-red-500 to-pink-500'
+              : 'bg-gradient-to-r from-green-500 to-emerald-500'
               } text-white`}>
               <div className="flex items-center">
                 <div className="bg-white bg-opacity-20 mr-3 p-2 rounded-lg">
@@ -677,8 +677,8 @@ export default function ConversationsPage() {
                 <button
                   onClick={executeConfirmedAction}
                   className={`flex-1 px-4 py-2 text-white font-medium rounded-lg transition-colors ${confirmAction.type === 'hide'
-                      ? 'bg-red-500 hover:bg-red-600'
-                      : 'bg-green-500 hover:bg-green-600'
+                    ? 'bg-red-500 hover:bg-red-600'
+                    : 'bg-green-500 hover:bg-green-600'
                     }`}
                 >
                   {confirmAction.type === 'hide' ? 'Hide' : 'Restore'}
@@ -837,18 +837,18 @@ export default function ConversationsPage() {
                             selectedConversation.mergedTranscript.map((message, index) => {
                               const isUser = message.role === 'user'
                               const isAssistant = message.role === 'assistant'
-                              const hasSearchMatch = transcriptSearch && message.text.toLowerCase().includes(transcriptSearch.toLowerCase())
+                              const hasSearchMatch = transcriptSearch && message.content.toLowerCase().includes(transcriptSearch.toLowerCase())
 
                               return (
                                 <div key={index} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
                                   <div className={`max-w-xs sm:max-w-sm lg:max-w-md px-3 py-2 rounded-2xl ${isUser
-                                      ? 'bg-blue-500 text-white rounded-br-md'
-                                      : 'bg-gray-200 text-gray-800 rounded-bl-md'
+                                    ? 'bg-blue-500 text-white rounded-br-md'
+                                    : 'bg-gray-200 text-gray-800 rounded-bl-md'
                                     } ${hasSearchMatch ? 'ring-2 ring-yellow-400 ring-opacity-75' : ''}`}>
                                     <div className="flex items-center space-x-2 mb-1">
                                       <span className={`text-xs font-medium px-2 py-1 rounded-full ${isUser
-                                          ? 'bg-blue-400 bg-opacity-30 text-white'
-                                          : 'bg-gray-300 text-gray-700'
+                                        ? 'bg-blue-400 bg-opacity-30 text-white'
+                                        : 'bg-gray-300 text-gray-700'
                                         }`}>
                                         {isUser ? 'Me' : 'AI'}
                                       </span>
@@ -856,10 +856,10 @@ export default function ConversationsPage() {
                                     <p className="text-sm leading-relaxed">
                                       {transcriptSearch ? (
                                         <span dangerouslySetInnerHTML={{
-                                          __html: highlightText(message.text || '\u00A0', transcriptSearch)
+                                          __html: highlightText(message.content || '\u00A0', transcriptSearch)
                                         }} />
                                       ) : (
-                                        message.text || '\u00A0'
+                                        message.content || '\u00A0'
                                       )}
                                     </p>
                                   </div>
@@ -892,13 +892,13 @@ export default function ConversationsPage() {
                             return (
                               <div key={index} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
                                 <div className={`max-w-xs sm:max-w-sm lg:max-w-md px-3 py-2 rounded-2xl ${isUser
-                                    ? 'bg-blue-500 text-white rounded-br-md'
-                                    : 'bg-gray-200 text-gray-800 rounded-bl-md'
+                                  ? 'bg-blue-500 text-white rounded-br-md'
+                                  : 'bg-gray-200 text-gray-800 rounded-bl-md'
                                   } ${hasSearchMatch ? 'ring-2 ring-yellow-400 ring-opacity-75' : ''}`}>
                                   <div className="flex items-center space-x-2 mb-1">
                                     <span className={`text-xs font-medium px-2 py-1 rounded-full ${isUser
-                                        ? 'bg-blue-400 bg-opacity-30 text-white'
-                                        : 'bg-gray-300 text-gray-700'
+                                      ? 'bg-blue-400 bg-opacity-30 text-white'
+                                      : 'bg-gray-300 text-gray-700'
                                       }`}>
                                       {isUser ? 'Me' : 'AI'}
                                     </span>

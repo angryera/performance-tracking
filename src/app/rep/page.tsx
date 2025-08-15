@@ -768,7 +768,7 @@ export default function RepPortal() {
                                       {isUser ? 'Me' : 'AI'}
                                     </span>
                                   </div>
-                                  <p className="text-sm leading-relaxed">{message.text}</p>
+                                  <p className="text-sm leading-relaxed">{message.content}</p>
                                 </div>
                               </div>
                             );

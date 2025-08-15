@@ -133,7 +133,7 @@ const VAPICallWidget = ({
                                 <div className="flex items-center space-x-2">
                                     <button
                                         onClick={() => {
-                                            const transcriptText = transcript.map(msg => `${msg.role}: ${msg.text}`).join('\n')
+                                            const transcriptText = transcript.map(msg => `${msg.role}: ${msg.content}`).join('\n')
                                             navigator.clipboard.writeText(transcriptText)
                                         }}
                                         className="hover:bg-gray-100 p-2 rounded-lg text-gray-500 hover:text-gray-700 transition-colors"
@@ -187,7 +187,7 @@ const VAPICallWidget = ({
                                                                     {msg.role === 'user' ? 'You' : config.anam.persona.name}
                                                                 </div>
                                                                 <div className="text-sm text-left leading-relaxed">
-                                                                    {msg.text}
+                                                                    {msg.content}
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -225,7 +225,7 @@ const VAPICallWidget = ({
                 </div>
             </div>
         </div>
-    </div>  
+    </div>
 }
 
 export default VAPICallWidget

@@ -27,15 +27,15 @@ const useVAPIEventListener = ({
     setIsConnecting: (isConnecting: boolean) => void,
     setTranscript: Dispatch<SetStateAction<{
         role: string;
-        text: string;
+        content: string;
     }[]>>,
     setBackendResponse: (backendResponse: any) => void,
     setError: (error: any) => void,
     setIsSpeaking: (isSpeaking: boolean) => void,
     setIsProcessing: (isProcessing: boolean) => void,
-    onCallEnd?: (duration: number, transcript: string, mergedTranscript: Array<{ role: string, text: string }>) => void,
+    onCallEnd?: (duration: number, transcript: string, mergedTranscript: Array<{ role: string, content: string }>) => void,
     onTranscriptUpdate?: (transcript: string) => void,
-    getMergedTranscript: (transcriptRef: React.MutableRefObject<{ role: string, text: string }[]>) => Array<{ role: string, text: string }>,
+    getMergedTranscript: (transcriptRef: React.MutableRefObject<{ role: string, content: string }[]>) => Array<{ role: string, content: string }>,
     showErrorToast: (error: string) => void,
     transcriptRef: React.MutableRefObject<any[]>,
     currentCallIdRef: React.MutableRefObject<string | null>,
@@ -106,7 +106,7 @@ const useVAPIEventListener = ({
             if (activeModeRef.current === 'repmatch') {
                 setIsProcessing(true)
                 try {
-                    const transcriptStr = transcriptRef.current.map((t: any) => t.text).join(' ')
+                    const transcriptStr = transcriptRef.current.map((t: any) => t.content).join(' ')
                     console.log("🧾 Full transcriptRef.current:", transcriptRef.current)
 
                     if (transcriptStr.trim()) {
@@ -138,7 +138,7 @@ const useVAPIEventListener = ({
             }
 
             // Call the onCallEnd callback with accurate duration and transcript
-            const transcriptStr = transcriptRef.current.map((t: any) => t.text).join(' ')
+            const transcriptStr = transcriptRef.current.map((t: any) => t.content).join(' ')
             const mergedTranscriptData = getMergedTranscript(transcriptRef)
 
             onCallEnd?.(finalDuration, transcriptStr, mergedTranscriptData)
@@ -159,7 +159,7 @@ const useVAPIEventListener = ({
             // Some providers emit partial + final chunks. If a flag exists, keep finals only.
             const isFinal = message.is_final ?? message.final ?? true
 
-            const raw = (message.transcript ?? message.text ?? '').trim()
+            const raw = (message.transcript ?? message.content ?? '').trim()
             const role: string = message.role || (message.sender === 'user' ? 'user' : 'assistant')
 
             console.log('🔍 VAPIWidget - Received message:', { type: message.type, isFinal, raw, role })
@@ -170,7 +170,7 @@ const useVAPIEventListener = ({
             // Normalize whitespace so tiny diffs don't create dupes
             const normalized = raw.replace(/\s+/g, ' ').trim()
 
-            setTranscript((prev: { role: string, text: string }[]) => {
+            setTranscript((prev: { role: string, content: string }[]) => {
                 // find the last message from the same role
                 const lastIdx = [...prev]
                     .map((m, i) => [m, i])
@@ -181,33 +181,33 @@ const useVAPIEventListener = ({
                     const last = prev[lastIdx as number]
 
                     // If the new chunk extends the last one, replace it
-                    if (normalized.startsWith(last.text)) {
+                    if (normalized.startsWith(last.content)) {
                         const updated = prev.slice()
-                        updated[lastIdx as number] = { role, text: normalized }
+                        updated[lastIdx as number] = { role, content: normalized }
                         transcriptRef.current = updated
                         return updated
                     }
 
                     // If the new chunk is contained in the last, ignore it
-                    if (last.text.startsWith(normalized)) {
+                    if (last.content.startsWith(normalized)) {
                         transcriptRef.current = prev
                         return prev
                     }
                 }
 
                 // Drop exact dupes anywhere
-                if (prev.some(m => m.role === role && m.text === normalized)) {
+                if (prev.some(m => m.role === role && m.content === normalized)) {
                     transcriptRef.current = prev
                     return prev
                 }
 
-                const updated = [...prev, { role, text: normalized }]
+                const updated = [...prev, { role, content: normalized }]
                 transcriptRef.current = updated
                 return updated
             })
 
             // Call the onTranscriptUpdate callback
-            const transcriptStr = transcriptRef.current.map((t: any) => t.text).join(' ')
+            const transcriptStr = transcriptRef.current.map((t: any) => t.content).join(' ')
             onTranscriptUpdate?.(transcriptStr)
         })
 

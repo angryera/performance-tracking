@@ -3,24 +3,24 @@
 import { config } from '@/lib/config'
 import { formatDuration, formatTimestamp, getMessageAge } from '@/lib/utils'
 import { AnamEvent, createClient } from '@anam-ai/js-sdk'
-import { AlertCircle, Clock, Mic, MicOff, Phone, Play, Square, MessageSquare } from 'lucide-react'
+import { AlertCircle, Clock, MessageSquare, Mic, MicOff, Phone, Play, Square } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import AnamVideoWidget from './AnamVideoWidget'
 import { ConnectingOverlay, ProcessingOverlay, SuccessOverlay } from './Overlays'
 import ErrorToast from './Toast'
-import VAPISessionTypeSelector from './VAPISessionTypeSelector'
+import VAPICallWidget from './VAPICallWidget'
 import VAPIChatWidget from './VAPIChatWidget'
+import VAPISessionTypeSelector from './VAPISessionTypeSelector'
 
 import createSessionToken from './helpers/AnamSessionToken'
 import scrollToBottomHelper from './helpers/ScrollToBottom'
 import { getAllMessages, getMergedTranscript } from './helpers/Transcript'
 import useVAPIEventListener from './hooks/useVAPIEventListener'
-import VAPICallWidget from './VAPICallWidget'
 
 interface CallWidgetProps {
   onTranscriptUpdate?: (transcript: string) => void
-  onCallEnd?: (duration: number, transcript: string, mergedTranscript: Array<{ role: string, text: string }>) => void
+  onCallEnd?: (duration: number, transcript: string, mergedTranscript: Array<{ role: string, content: string }>) => void
   remainingSeconds?: number
   onTimeLimitReached?: () => void
   currentUser?: { id: string; email: string; firstName: string; lastName: string; role: string; minutes: number } | null
@@ -36,8 +36,8 @@ export default function CallWidget({
   const [vapi, setVapi] = useState<any>(null)
   const [isCallActive, setIsCallActive] = useState(false)
   const [selectedMode, setSelectedMode] = useState<string>('practice')
-  const [transcript, setTranscript] = useState<{ role: string, text: string }[]>([])
-  const transcriptRef = useRef<{ role: string, text: string }[]>([])
+  const [transcript, setTranscript] = useState<{ role: string, content: string }[]>([])
+  const transcriptRef = useRef<{ role: string, content: string }[]>([])
   const [isMuted, setIsMuted] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
@@ -72,14 +72,9 @@ export default function CallWidget({
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+
   const videoRef = useRef<HTMLVideoElement>(null)
   const messageListRef = useRef<HTMLDivElement>(null)
-
-  // Mock functions for VAPI Chat integration (these would be passed from parent component)
-  const fetchConversations = () => {
-    console.log('Mock fetchConversations called')
-    // This should be implemented by parent component
-  }
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const conversationHistoryRef = useRef<any[]>([])
 
@@ -563,7 +558,7 @@ export default function CallWidget({
     const finalTranscript = getAllMessages(userMessages, conversationHistoryRef)
     const finalMergedTranscript = finalTranscript.map(msg => ({
       role: msg.role,
-      text: msg.text
+      content: msg.content
     }))
 
     // Calculate call duration
@@ -609,13 +604,13 @@ export default function CallWidget({
 
     // Call the onCallEnd callback if provided
     if (onCallEnd) {
-      const transcriptText = finalTranscript.map(msg => `${msg.role}: ${msg.text}`).join('\n')
+      const transcriptText = finalTranscript.map(msg => `${msg.role}: ${msg.content}`).join('\n')
       onCallEnd(duration, transcriptText, finalMergedTranscript)
     }
 
     // Update transcript for parent component
     if (onTranscriptUpdate) {
-      const transcriptText = finalTranscript.map(msg => `${msg.role}: ${msg.text}`).join('\n')
+      const transcriptText = finalTranscript.map(msg => `${msg.role}: ${msg.content}`).join('\n')
       onTranscriptUpdate(transcriptText)
     }
 
@@ -658,7 +653,7 @@ export default function CallWidget({
       const userMessage = {
         id: userMessageId,
         role: 'user',
-        text: messageText,
+        content: messageText,
         timestamp: new Date().toISOString(),
         source: 'user'
       }
@@ -675,7 +670,7 @@ export default function CallWidget({
       showErrorToast('Failed to send message. Please try again.')
 
       // Remove the message from user messages if sending failed
-      setUserMessages(prev => prev.filter(msg => msg.text !== messageText))
+      setUserMessages(prev => prev.filter(msg => msg.content !== messageText))
     } finally {
       setIsSendingMessage(false)
     }

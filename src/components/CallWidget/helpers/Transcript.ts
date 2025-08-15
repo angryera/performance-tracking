@@ -1,40 +1,40 @@
 // Function to merge consecutive messages from the same role
 export const getMergedTranscript = (
-  transcriptRef: React.MutableRefObject<{ role: string; text: string }[]>
+  transcriptRef: React.MutableRefObject<{ role: string; content: string }[]>
 ) => {
   if (transcriptRef.current.length === 0) return [];
 
   const merged: any[] = [];
   let currentRole = transcriptRef.current[0].role;
-  let currentText = transcriptRef.current[0].text;
+  let currentText = transcriptRef.current[0].content;
 
   for (let i = 1; i < transcriptRef.current.length; i++) {
     const message = transcriptRef.current[i];
 
     if (message.role === currentRole) {
       // Same role, merge the text
-      currentText += " " + message.text;
+      currentText += " " + message.content;
     } else {
       // Different role, save current and start new
-      merged.push({ role: currentRole, text: currentText });
+      merged.push({ role: currentRole, content: currentText });
       currentRole = message.role;
-      currentText = message.text;
+      currentText = message.content;
     }
   }
 
   // Add the last message
-  merged.push({ role: currentRole, text: currentText });
+  merged.push({ role: currentRole, content: currentText });
 
   return merged;
 };
 
 // Combine and sort all messages by timestamp
 export const getAllMessages = (
-  userMessages: { role: string; text: string; timestamp: string }[],
+  userMessages: { role: string; content: string; timestamp: string }[],
   conversationHistoryRef: React.MutableRefObject<
     {
       role: string;
-      text: string;
+      content: string;
       timestamp: string;
     }[]
   >
