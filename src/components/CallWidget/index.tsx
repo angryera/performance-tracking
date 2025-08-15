@@ -147,25 +147,46 @@ export default function CallWidget({
   // Handle mute for Anam video calls
   const handleAnamMute = async (mute: boolean) => {
     try {
-      if (!audioStreamRef.current) {
-        await getUserMedia()
-
-        if (!audioStreamRef.current) {
-          throw new Error('Cannot access microphone for Anam mode')
-        }
+      if (!anamClient) {
+        throw new Error('Anam client not initialized')
       }
 
-      // Enable/disable all audio tracks
-      audioStreamRef.current.getTracks().forEach(track => {
-        if (track.kind === 'audio') {
-          track.enabled = !mute
-        }
-      })
+      // Use Anam SDK mute/unmute APIs
+      let audioState
+      if (mute) {
+        audioState = anamClient.muteInputAudio()
+        console.log('🔇 Anam input audio muted:', audioState)
+      } else {
+        audioState = anamClient.unmuteInputAudio()
+        console.log('🔊 Anam input audio unmuted:', audioState)
+      }
 
+      // Update local mute state
       setIsMuted(mute)
+
+      // Also handle local audio stream for fallback
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach(track => {
+          if (track.kind === 'audio') {
+            track.enabled = !mute
+          }
+        })
+      }
+
     } catch (error) {
       console.error('Anam mute control failed:', error)
-      throw error
+      
+      // Fallback to local audio stream control
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach(track => {
+          if (track.kind === 'audio') {
+            track.enabled = !mute
+          }
+        })
+        setIsMuted(mute)
+      } else {
+        throw error
+      }
     }
   }
 
@@ -548,9 +569,9 @@ export default function CallWidget({
     }
   }
 
-  const endAnamChat = () => {
+  const endAnamChat = async () => {
     if (anamClient) {
-      anamClient.stopStreaming()
+      await anamClient.stopStreaming()
       setAnamClient(null)
     }
 
@@ -884,6 +905,9 @@ export default function CallWidget({
           inputRef={inputRef}
           formatTimestamp={formatTimestamp}
           getMessageAge={getMessageAge}
+          isMuted={isMuted}
+          toggleMute={toggleMute}
+          isMuteProcessing={isMuteProcessing}
         />
       )}
 
