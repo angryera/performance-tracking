@@ -401,7 +401,7 @@ export default function RepPortal() {
       </div>
 
       {/* Main Content */}
-      <main className="z-10 relative mx-auto px-4 sm:px-6 lg:px-8 py-6 max-w-7xl">
+      <main className="relative mx-auto px-4 sm:px-6 lg:px-8 py-6 max-w-7xl">
         {activeTab === 'dashboard' ? (
           <div className="space-y-6">
             {/* Usage Stats */}

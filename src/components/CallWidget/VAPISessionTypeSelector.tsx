@@ -1,3 +1,5 @@
+import { useEffect } from "react"
+
 const VAPISessionTypeSelector = ({
     pendingVapiMode,
     setSelectedVapiSessionType,
@@ -13,8 +15,18 @@ const VAPISessionTypeSelector = ({
     startVapiCall: () => void,
     setPendingVapiMode: (mode: string) => void,
 }) => {
-    return <div className="z-50 fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 backdrop-blur-sm !mt-0 p-4">
-        <div className="bg-gray-800 shadow-2xl p-8 border border-gray-700 rounded-3xl w-full max-w-2xl">
+    // Disable body scrolling when widget is open
+    useEffect(() => {
+        // Disable body scroll
+        document.body.style.overflow = 'hidden'
+
+        // Re-enable body scroll when component unmounts
+        return () => {
+            document.body.style.overflow = 'unset'
+        }
+    }, [])
+    return <div className="z-[9999] fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 backdrop-blur-sm !mt-0 p-4">
+        <div className="bg-gray-800 shadow-2xl p-8 border border-gray-700 rounded-3xl w-full max-w-2xl my-4 max-h-[90vh] overflow-y-auto">
             <div className="mb-8 text-center">
                 <h3 className="mb-4 font-bold text-white text-3xl">Choose VAPI Session Type</h3>
                 <p className="text-gray-300 text-lg">How would you like to interact with the {pendingVapiMode} assistant?</p>

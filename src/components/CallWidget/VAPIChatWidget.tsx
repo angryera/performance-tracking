@@ -171,11 +171,20 @@ export default function VAPIChatWidget({
     startChat()
   }, []) // Empty dependency array means this runs once when component mounts
 
+  // Disable body scrolling when widget is open
+  useEffect(() => {
+    // Disable body scroll
+    document.body.style.overflow = 'hidden'
 
+    // Re-enable body scroll when component unmounts
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [])
 
   return (
-    <div className="z-50 fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 backdrop-blur-sm !mt-0 p-4">
-      <div className="bg-gray-800 shadow-2xl p-4 sm:p-6 lg:p-8 border border-gray-700 rounded-2xl lg:rounded-3xl w-full max-w-6xl h-[700px] sm:h-[800px] sm:max-h-[80vh]">
+    <div className="z-[9999] fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 backdrop-blur-sm !mt-0 p-4">
+      <div className="bg-gray-800 shadow-2xl p-4 sm:p-6 lg:p-8 border border-gray-700 rounded-2xl lg:rounded-3xl w-full max-w-6xl h-full max-h-[90vh] flex flex-col">
         <div className="flex flex-row justify-between items-start sm:items-center gap-4 mb-4 sm:mb-6 lg:mb-8">
           <div className="flex items-center space-x-2 sm:space-x-4">
             <div className="flex items-center gap-2 sm:gap-3">
@@ -205,7 +214,7 @@ export default function VAPIChatWidget({
         </div>
 
         {/* Chat Interface */}
-        <div className="flex flex-col h-[500px] sm:h-[550px] lg:h-[600px]">
+        <div className="flex flex-col flex-1 min-h-0">
           <div className="flex flex-col w-full h-full">
             {/* Error Display */}
             {error && (
@@ -221,8 +230,8 @@ export default function VAPIChatWidget({
             )}
 
             {/* Chat Interface */}
-            <div className="flex flex-col flex-1 bg-gray-900 p-4 rounded-xl">
-              <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-col flex-1 bg-gray-900 p-4 rounded-xl min-h-0">
+              <div className="flex justify-between items-center mb-4 flex-shrink-0">
                 <div className="flex items-center space-x-3">
                   <div className="flex items-center space-x-2">
                     <div className="bg-green-500 rounded-full w-2 h-2 animate-pulse"></div>
@@ -257,10 +266,10 @@ export default function VAPIChatWidget({
               </div>
 
               {/* Messages Display */}
-              <div className="flex-1 bg-gray-800 rounded-xl overflow-hidden">
+              <div className="flex-1 flex flex-col bg-gray-800 rounded-xl overflow-hidden min-h-0">
                 <div
                   ref={messageListRef}
-                  className="p-4 h-100 h-full !max-h-[420px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-700"
+                  className="flex-1 p-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-700 min-h-0"
                 >
                   {messages.length === 0 ? (
                     <div className="flex flex-col justify-center items-center h-full text-gray-400">
@@ -326,7 +335,7 @@ export default function VAPIChatWidget({
               </div>
 
               {/* Input Area */}
-              <div className="flex space-x-2 mt-4">
+              <div className="flex space-x-2 mt-4 flex-shrink-0">
                 <textarea
                   ref={inputRef}
                   value={inputMessage}
