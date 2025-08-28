@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     for (const row of sheetData.users) {
       // Check if user already exists
       const existingUser = await prisma.user.findUnique({
-        where: { email: row.Email }
+        where: { email: row.Email.toLowerCase() }
       })
 
       if (existingUser) {
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
         const newTotalMinutes = currentMinutes + importedMinutes
 
         await prisma.user.update({
-          where: { email: row.Email },
+          where: { email: row.Email.toLowerCase() },
           data: {
             firstName: row.First_Name,
             lastName: row.Last_Name,
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
         // Create new user
         await prisma.user.create({
           data: {
-            email: row.Email,
+            email: row.Email.toLowerCase(),
             firstName: row.First_Name,
             lastName: row.Last_Name,
             password: await bcrypt.hash(row.Password, 10),
